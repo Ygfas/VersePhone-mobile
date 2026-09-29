@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, ScrollView, Image, Text, TouchableOpacity, Modal, Pressable, FlatList, useWindowDimensions, Animated } from 'react-native';
+import { View, ScrollView, Image, Text, TouchableOpacity, Modal, Pressable, FlatList, useWindowDimensions, Animated, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,18 +20,13 @@ function VideoGridCard({ videoSrc, onPress }) {
       onPress={onPress}
       activeOpacity={0.8}
     >
-      {/* Video Thumbnail (Jalan terus tanpa suara) */}
       <VideoView
         style={{ width: '100%', height: '100%' }}
         player={player}
         nativeControls={false}
         contentFit="cover"
       />
-
-      {/* Overlay Icon Play Tepat di Tengah */}
-      <View className="absolute inset-0 items-center justify-center bg-black/20 pointer-events-none">
-
-      </View>
+      <View className="absolute inset-0 items-center justify-center bg-black/20 pointer-events-none" />
     </TouchableOpacity>
   );
 }
@@ -62,10 +57,8 @@ function VideoModalPopup({ videoSrc, onClose }) {
             nativeControls={true}
             contentFit="contain"
           />
-
-          {/* Tombol Close */}
           <TouchableOpacity
-            className="absolute top-3 right-3  p-1.5 rounded-full z-10"
+            className="absolute top-3 right-3 p-1.5 rounded-full z-10"
             onPress={onClose}
           >
             <MaterialIcons name="close" size={24} color="#FFFFFF" />
@@ -86,10 +79,8 @@ const VideoGrid = ({ onSelectVideo }) => {
   ];
 
   return (
-    <View className='flex'>
-      {/* <Text className="px-4 mb-3 text-onSurface font-bold text-base">Artikel</Text> */}
+    <View className="flex">
       <View className="px-3 flex-row flex-wrap justify-center gap-2 z-0 shadow-md bg-slate-300 py-4">
-
         {videoList.map((item) => (
           <VideoGridCard
             key={item.id}
@@ -102,7 +93,7 @@ const VideoGrid = ({ onSelectVideo }) => {
   );
 };
 
-// --- AUTO BANNER CAROUSEL (infinite loop, full-width, no radius, auto 10s) ---
+// --- AUTO BANNER CAROUSEL ---
 function AutoBannerCarousel({ data }) {
   const { width, height: screenHeight } = useWindowDimensions();
   const CAROUSEL_HEIGHT = screenHeight * 0.75;
@@ -165,7 +156,7 @@ function AutoBannerCarousel({ data }) {
         renderItem={({ item }) => (
           <View style={{ width, height: CAROUSEL_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
             <Image
-              source={{ uri: item.image }}
+              source={typeof item.image === 'string' ? { uri: item.image } : item.image}
               style={{ width, height: CAROUSEL_HEIGHT }}
               resizeMode="cover"
             />
@@ -193,15 +184,31 @@ function AutoBannerCarousel({ data }) {
 }
 
 // --- ARTICLE SLIDER COMPONENT ---
-function ArticleSlider({ articles, onArticlePress }) {
+function ArticleSlider({ articles, onArticlePress, loading, error }) {
   const { width } = useWindowDimensions();
   const CARD_WIDTH = width - 32;
+
+  if (loading) {
+    return (
+      <View className="p-6 items-center justify-center">
+        <ActivityIndicator size="large" color="#0D47A1" />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View className="px-4 py-2">
+        <Text className="text-red-500 text-sm">{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <FlatList
       horizontal
       data={articles}
-      keyExtractor={(item) => String(item.id)}
+      keyExtractor={(item, index) => item.id ? String(item.id) : String(index)}
       showsHorizontalScrollIndicator={false}
       snapToInterval={CARD_WIDTH + 12}
       decelerationRate="fast"
@@ -213,11 +220,17 @@ function ArticleSlider({ articles, onArticlePress }) {
           style={{ width: CARD_WIDTH }}
           className="bg-surfaceContainerLow rounded-[12px] overflow-hidden elevation-2 shadow-sm"
         >
-          <Image
-            source={{ uri: item.image }}
-            style={{ width: '100%', height: 200 }}
-            resizeMode="cover"
-          />
+          {item.image ? (
+            <Image
+              source={{ uri: item.image }}
+              style={{ width: '100%', height: 200 }}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={{ width: '100%', height: 200 }} className="bg-surfaceContainerHighest items-center justify-center">
+              <Text className="text-xs text-onSurfaceVariant">Tidak ada gambar</Text>
+            </View>
+          )}
           <View className="p-4">
             <Text className="text-onSurface font-bold text-base mb-1" numberOfLines={2}>{item.title}</Text>
             <Text className="text-onSurfaceVariant text-sm" numberOfLines={2}>{item.summary}</Text>
@@ -242,49 +255,53 @@ export default function Home() {
   const [popupData, setPopupData] = useState(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
 
+  // --- STATE DATA ARTIKEL DARI DATABASE ENDPOINT ---
+  const [articles, setArticles] = useState([]);
+  const [articlesLoading, setArticlesLoading] = useState(true);
+  const [articlesError, setArticlesError] = useState(null);
+
+  // MEMANGGIL ENDPOINT API ARTIKEL NEXT.JS
+  useEffect(() => {
+    fetchArticles();
+  }, []);
+
+  const fetchArticles = async () => {
+    try {
+      setArticlesLoading(true);
+      // Menggunakan IPv4 Address Laptop Anda (192.168.1.9)
+      const API_URL = process.env.EXPO_PUBLIC_API_URL2;
+      const response = await fetch(`${API_URL}/api/artikel`);
+      const data = await response.json();
+
+      if (response.ok) {
+        // Mapping kolom dari tabel database ke properti yang dibutuhkan UI
+        const mappedArticles = data.map((item) => ({
+          id: item.id_artikel || item.id,
+          title: item.judul_artikel || item.judul || item.title,
+          summary: item.ringkasan_artikel || item.ringkasan || item.summary || 'Klik untuk membaca detail artikel ini.',
+          body: item.isi_artikel || item.konten || item.isi || item.body,
+          image: item.gambar_artikel || item.gambar || item.image,
+        }));
+        setArticles(mappedArticles);
+      } else {
+        setArticlesError('Gagal memuat artikel dari server');
+      }
+    } catch (err) {
+      console.error('Error fetching articles:', err);
+      setArticlesError('Gagal terhubung ke server API artikel');
+    } finally {
+      setArticlesLoading(false);
+    }
+  };
+
   const carouselData = [
-    { id: 1, image: 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg' },
-    { id: 2, image: 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg' },
-    { id: 3, image: 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg' },
-    { id: 4, image: 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg' },
-    { id: 5, image: 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg' },
-  ];
-
-  const addCarouselData = [
-    { id: 1, title: 'Add 1' },
-    { id: 2, title: 'Add 2' },
-    { id: 3, title: 'Add 3' },
-  ];
-
-  const heroCarouselData = [
-    {
-      id: 1,
-      title: 'Smartphone Flagship 2025',
-      summary: 'Teknologi terbaru hadir dengan layar AMOLED 120Hz.',
-      body: 'Smartphone flagship 2025 membawa inovasi besar dalam dunia mobile. Ditenagai chipset generasi terbaru dengan proses fabrikasi 3nm, perangkat ini mampu menjalankan aplikasi berat dengan sangat lancar.',
-      image: 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg',
-    },
-    {
-      id: 2,
-      title: 'Tips Memilih HP Gaming',
-      summary: 'Performa tinggi tidak harus mahal, simak tipsnya.',
-      body: 'Memilih HP gaming yang tepat memerlukan pertimbangan matang. Pertama, perhatikan prosesor — setidaknya Snapdragon 7 Gen 2 atau Dimensity 9000.',
-      image: 'https://i.pinimg.com/736x/25/7a/e3/257ae37b125853599f57cf8f0052653c.jpg',
-    },
-    {
-      id: 3,
-      title: 'Review Kamera Terbaik 2025',
-      summary: 'Mana HP dengan kamera terbaik tahun ini?',
-      body: 'Persaingan kamera smartphone semakin ketat di 2025. Beberapa merek unggulan menghadirkan sensor besar 1 inci.',
-      image: 'https://i.pinimg.com/736x/fe/8b/4f/fe8b4f05c091e9fd9807deac9b314f11.jpg',
-    },
-    {
-      id: 4,
-      title: 'Tren HP Lipat 2025',
-      summary: 'HP lipat makin tipis dan tahan lama, layak dibeli?',
-      body: 'HP lipat atau foldable phone mengalami evolusi signifikan di 2025. Engsel yang lebih kokoh dan layar yang lebih tahan goresan menjadi perhatian utama.',
-      image: 'https://i.pinimg.com/736x/be/d0/e5/bed0e5aee40b1da3d2e7f922fd110a10.jpg',
-    },
+    { id: 1, image: require('../../../assets/thumbnail/xiaomi1.jpg') },
+    { id: 2, image: require('../../../assets/thumbnail/samsung1.jpg') },
+    { id: 3, image: require('../../../assets/thumbnail/ip1.jpg') },
+    { id: 4, image: require('../../../assets/thumbnail/vivo1.jpg') },
+    { id: 5, image: require('../../../assets/thumbnail/oppo1.jpg') },
+    { id: 6, image: require('../../../assets/thumbnail/iqoo1.jpg') },
+    { id: 7, image: require('../../../assets/thumbnail/infinix1.jpg') },
   ];
 
   const brandList = [
@@ -427,13 +444,11 @@ export default function Home() {
         {/* AUTO BANNER CAROUSEL */}
         <AutoBannerCarousel data={carouselData} />
 
-        {/* VIDEO GRID (Langsung play muted, klik memicu modal popup) */}
+        {/* VIDEO GRID */}
         <VideoGrid onSelectVideo={(src) => setSelectedVideo(src)} />
 
         {/* HOME 2 CONTENT */}
-        <View className="mb-6 z-0">
-          {/* Komponen Carousel Anda */}
-        </View>
+        <View className="mb-6 z-0" />
 
         <View className="px-4 mb-10 flex-row gap-4 z-0">
           <TouchableOpacity
@@ -478,10 +493,15 @@ export default function Home() {
           </View>
         </View>
 
-        {/* ARTIKEL ACCORDION SLIDER */}
+        {/* ARTIKEL ACCORDION SLIDER (AMBIL DATA DARI ENDPOINT DB) */}
         <View className="mb-10 z-0">
           <Text className="px-4 mb-3 text-onSurface font-bold text-base">Artikel</Text>
-          <ArticleSlider articles={heroCarouselData} onArticlePress={(a) => setPopupData({ image: a.image, text: a.title, body: a.body })} />
+          <ArticleSlider
+            articles={articles}
+            loading={articlesLoading}
+            error={articlesError}
+            onArticlePress={(a) => setPopupData({ image: a.image, text: a.title, body: a.body })}
+          />
         </View>
 
         {/* HOME 3 CONTENT BRAND */}
@@ -500,18 +520,13 @@ export default function Home() {
                 activeOpacity={0.8}
                 className="items-center"
               >
-                {/* Lingkaran Icon Berukuran Lebih Besar dengan Background Biru */}
                 <View className="w-16 h-16 rounded-full bg-[#FFFF] items-center justify-center p-3 shadow-md elevation-2 mb-1.5">
                   <Image
                     source={brand.logo}
                     className="w-full h-full"
                     resizeMode="contain"
-                  // Tint color putih opsional jika logo berupa monochrome/PNG transparan
-                  // style={{ tintColor: '#FFFFFF' }} 
                   />
                 </View>
-
-                {/* Teks Nama Brand di Bawah Icon */}
                 <Text className="text-xs font-semibold text-onSurface text-center">
                   {brand.name}
                 </Text>
@@ -564,7 +579,9 @@ export default function Home() {
         >
           <Pressable onPress={() => { }}>
             <View className="bg-surface rounded-[20px] overflow-hidden w-full max-w-[400px]">
-              <Image source={{ uri: popupData?.image }} style={{ width: '100%', height: 220 }} resizeMode="cover" />
+              {popupData?.image && (
+                <Image source={{ uri: popupData?.image }} style={{ width: '100%', height: 220 }} resizeMode="cover" />
+              )}
               <ScrollView style={{ maxHeight: 280 }} contentContainerStyle={{ padding: 20 }}>
                 <Text className="text-xl font-bold text-onSurface mb-3">{popupData?.text}</Text>
                 <Text className="text-sm text-onSurfaceVariant leading-6">
