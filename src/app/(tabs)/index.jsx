@@ -1,17 +1,45 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, ScrollView, Image, Text, TouchableOpacity, Modal, Pressable, FlatList, useWindowDimensions, Animated, ActivityIndicator } from 'react-native';
+import { View, ScrollView, Image, Text, TouchableOpacity, Modal, Pressable, FlatList, useWindowDimensions, Animated, InteractionManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { getApiBaseUrl } from '../../lib/api';
+import ImageWithFallback from '../../components/ImageWithFallback';
+import { setCurrentArticle } from '../../store/article-view';
+import { setCurrentPromo } from '../../store/promo-view';
+import { useThemeMode } from '../../store/theme-store';
 
 // --- SUB-COMPONENT CARD VIDEO (Grid Thumbnail - Auto-play & Muted) ---
 function VideoGridCard({ videoSrc, onPress }) {
+  const [status, setStatus] = useState('loading');
   const player = useVideoPlayer(videoSrc, (player) => {
     player.loop = true;
     player.muted = true;
     player.play();
   });
+
+  // Jaga video agar tetap berputar terus tanpa berhenti (auto replay jika selesai/pause)
+  useEffect(() => {
+    player.play();
+    const subStatus = player.addListener('statusChange', (s) => {
+      setStatus(s.status);
+      if (s.status === 'readyToPlay' || s.status === 'paused') {
+        player.play();
+      }
+    });
+
+    const subEnd = player.addListener('playToEnd', () => {
+      player.replay();
+    });
+
+    return () => {
+      subStatus.remove();
+      subEnd.remove();
+    };
+  }, [player]);
+
+  const isBuffering = status === 'loading' || status === 'idle';
 
   return (
     <TouchableOpacity
@@ -20,18 +48,22 @@ function VideoGridCard({ videoSrc, onPress }) {
       onPress={onPress}
       activeOpacity={0.8}
     >
+      {isBuffering && <Skeleton className="absolute inset-0 rounded-none z-10" />}
+
       <VideoView
         style={{ width: '100%', height: '100%' }}
         player={player}
         nativeControls={false}
         contentFit="cover"
       />
-      <View className="absolute inset-0 items-center justify-center bg-black/20 pointer-events-none" />
+      {!isBuffering && (
+        <View className="absolute inset-0 items-center justify-center bg-black/20 pointer-events-none" />
+      )}
     </TouchableOpacity>
   );
 }
 
-// --- SUB-COMPONENT POPUP MODAL VIDEO (Suara Aktif / Unmuted) ---
+// --- POPUP MODAL VIDEO (Suara Aktif / Unmuted) ---
 function VideoModalPopup({ videoSrc, onClose }) {
   const player = useVideoPlayer(videoSrc, (player) => {
     player.loop = true;
@@ -183,6 +215,29 @@ function AutoBannerCarousel({ data }) {
   );
 }
 
+// --- SKELETON SHIMMER (placeholder saat konten masih load) ---
+function Skeleton({ className = '' }) {
+  const pulse = useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 350, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0.5, duration: 350, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+
+  return (
+    <Animated.View
+      style={{ opacity: pulse }}
+      className={`bg-slate-200 dark:bg-slate-700 rounded-[8px] ${className}`}
+    />
+  );
+}
+
 // --- ARTICLE SLIDER COMPONENT ---
 function ArticleSlider({ articles, onArticlePress, loading, error }) {
   const { width } = useWindowDimensions();
@@ -190,8 +245,22 @@ function ArticleSlider({ articles, onArticlePress, loading, error }) {
 
   if (loading) {
     return (
-      <View className="p-6 items-center justify-center">
-        <ActivityIndicator size="large" color="#0D47A1" />
+      <View className="px-4 flex-row gap-3">
+        {[1, 2].map((i) => (
+          <View
+            key={i}
+            style={{ width: (CARD_WIDTH - 12) / 2 }}
+            className="bg-surfaceContainerLow rounded-[12px] overflow-hidden pb-4"
+          >
+            <Skeleton className="w-full h-[200px]" />
+            <View className="p-4 gap-2.5">
+              <Skeleton className="w-3/4 h-5" />
+              <Skeleton className="w-full h-3.5" />
+              <Skeleton className="w-2/3 h-3.5" />
+              <Skeleton className="w-24 h-4 mt-1" />
+            </View>
+          </View>
+        ))}
       </View>
     );
   }
@@ -220,17 +289,7 @@ function ArticleSlider({ articles, onArticlePress, loading, error }) {
           style={{ width: CARD_WIDTH }}
           className="bg-surfaceContainerLow rounded-[12px] overflow-hidden elevation-2 shadow-sm"
         >
-          {item.image ? (
-            <Image
-              source={{ uri: item.image }}
-              style={{ width: '100%', height: 200 }}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={{ width: '100%', height: 200 }} className="bg-surfaceContainerHighest items-center justify-center">
-              <Text className="text-xs text-onSurfaceVariant">Tidak ada gambar</Text>
-            </View>
-          )}
+          <ImageWithFallback uri={item.image} style={{ width: '100%', height: 200 }} />
           <View className="p-4">
             <Text className="text-onSurface font-bold text-base mb-1" numberOfLines={2}>{item.title}</Text>
             <Text className="text-onSurfaceVariant text-sm" numberOfLines={2}>{item.summary}</Text>
@@ -248,12 +307,27 @@ function ArticleSlider({ articles, onArticlePress, loading, error }) {
 export default function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const isDarkMode = useThemeMode();
   const { height: screenHeight } = useWindowDimensions();
   const scrollY = useRef(new Animated.Value(0)).current;
   const [showNotif, setShowNotif] = useState(false);
   const [showSearchHistory, setShowSearchHistory] = useState(false);
   const [popupData, setPopupData] = useState(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
+
+  // Manfaat berbelanja (info chips)
+  const benefits = [
+    { icon: 'local-shipping', label: 'Gratis Ongkir' },
+    { icon: 'verified', label: 'Garansi Resmi' },
+    { icon: 'savings', label: 'Cashback 5%' },
+    { icon: 'payments', label: 'Bisa COD' },
+  ];
+
+  // Buka halaman detail promo (seperti halaman artikel)
+  const openPromo = (p) => {
+    setCurrentPromo(p);
+    router.push(`/promo/${p.id}`);
+  };
 
   // --- STATE DATA ARTIKEL DARI DATABASE ENDPOINT ---
   const [articles, setArticles] = useState([]);
@@ -262,26 +336,100 @@ export default function Home() {
 
   // MEMANGGIL ENDPOINT API ARTIKEL NEXT.JS
   useEffect(() => {
-    fetchArticles();
+    // Tunda fetch sampai layar selesai animasi/interaksi pertama,
+    // supaya render awal cepat dan aplikasi tidak terasa berat.
+    const task = InteractionManager.runAfterInteractions(() => {
+      fetchArticles();
+    });
+    return () => task.cancel();
   }, []);
+
+  // --- STATE DATA IKLAN/PROMO DARI DATABASE ENDPOINT ---
+  const [iklan, setIklan] = useState([]);
+  const [iklanLoading, setIklanLoading] = useState(true);
+
+  // MEMANGGIL ENDPOINT API IKLAN NEXT.JS (tabel iklan_random)
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      fetchIklan();
+    });
+    return () => task.cancel();
+  }, []);
+
+  const fetchIklan = async () => {
+    try {
+      setIklanLoading(true);
+      const API_URL = getApiBaseUrl();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(`${API_URL}/api/iklan`, { signal: controller.signal });
+      clearTimeout(timeout);
+      const data = await response.json();
+
+      if (response.ok && Array.isArray(data)) {
+        // Kolom DB: id_iklan, gambar (sudah base64 data-URI dari API), title, text
+        const mapped = data.map((item, idx) => ({
+          id: item?.id_iklan ?? idx,
+          title: item?.title ?? 'Promo',
+          body: item?.text ?? '',
+          image: item?.gambar ?? null,
+        }));
+        setIklan(mapped);
+      }
+    } catch (e) {
+      // Gagal ambil iklan -> blok promo tidak dirender, aplikasi tetap jalan
+    } finally {
+      setIklanLoading(false);
+    }
+  };
 
   const fetchArticles = async () => {
     try {
       setArticlesLoading(true);
-      // Menggunakan IPv4 Address Laptop Anda (192.168.1.9)
-      const API_URL = process.env.EXPO_PUBLIC_API_URL2;
-      const response = await fetch(`${API_URL}/api/artikel`);
+      // Host API otomatis mengikuti host dev server (WiFi / hotspot) — lihat lib/api.js
+      const API_URL = getApiBaseUrl();
+      // Timeout 10 detik: fetch yang menggantung tidak membekukan UI
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(`${API_URL}/api/artikel`, { signal: controller.signal });
+      clearTimeout(timeout);
       const data = await response.json();
 
       if (response.ok) {
-        // Mapping kolom dari tabel database ke properti yang dibutuhkan UI
-        const mappedArticles = data.map((item) => ({
-          id: item.id_artikel || item.id,
-          title: item.judul_artikel || item.judul || item.title,
-          summary: item.ringkasan_artikel || item.ringkasan || item.summary || 'Klik untuk membaca detail artikel ini.',
-          body: item.isi_artikel || item.konten || item.isi || item.body,
-          image: item.gambar_artikel || item.gambar || item.image,
-        }));
+        // Mapping kolom dari tabel database ke properti yang dibutuhkan UI.
+        // Dibuat kebal: data aneh (angka, null, response bukan array) ditangani
+        // per item — tidak akan membuat aplikasi crash.
+        const mappedArticles = (Array.isArray(data) ? data : []).map((item) => {
+          try {
+            const rawImage = item?.gambar_artikel || item?.gambar || item?.image;
+            // Gambar yang sudah punya skema (http(s)://, data:, file:, content:)
+            // dibiarkan apa adanya. Hanya path relatif ("/uploads/...") yang
+            // disambung jadi URL absolut.
+            const image =
+              typeof rawImage === 'string' && rawImage.trim()
+                ? /^(https?:\/\/|data:|file:|content:)/i.test(rawImage.trim())
+                  ? rawImage.trim()
+                  : `${API_URL}${rawImage.trim().startsWith('/') ? '' : '/'}${rawImage.trim()}`
+                : null;
+
+            return {
+              id: item?.id_artikel || item?.id,
+              title: item?.judul_artikel || item?.judul || item?.title,
+              summary: item?.ringkasan_artikel || item?.ringkasan || item?.summary || 'Klik untuk membaca detail artikel ini.',
+              body: item?.isi_artikel || item?.konten || item?.isi || item?.body,
+              image,
+            };
+          } catch {
+            // Satu baris data bermasalah -> dilewati, bukan crash
+            return {
+              id: null,
+              title: item?.judul_artikel || item?.judul || item?.title || 'Artikel',
+              summary: '',
+              body: '',
+              image: null,
+            };
+          }
+        });
         setArticles(mappedArticles);
       } else {
         setArticlesError('Gagal memuat artikel dari server');
@@ -293,6 +441,18 @@ export default function Home() {
       setArticlesLoading(false);
     }
   };
+
+  // Pop up iklan promo otomatis (sekali, 5 detik setelah halaman terbuka)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setPopupData({
+        image: 'https://i.pinimg.com/736x/25/7a/e3/257ae37b125853599f57cf8f0052653c.jpg',
+        text: 'Promo Spesial Minggu Ini',
+        body: 'Gratis ongkir se-Indonesia + cashback hingga 5% untuk semua smartphone. Berlaku sampai akhir bulan — jangan sampai kehabisan!',
+      });
+    }, 5000);
+    return () => clearTimeout(t);
+  }, []);
 
   const carouselData = [
     { id: 1, image: require('../../../assets/thumbnail/xiaomi1.jpg') },
@@ -447,51 +607,101 @@ export default function Home() {
         {/* VIDEO GRID */}
         <VideoGrid onSelectVideo={(src) => setSelectedVideo(src)} />
 
-        {/* HOME 2 CONTENT */}
-        <View className="mb-6 z-0" />
-
-        <View className="px-4 mb-10 flex-row gap-4 z-0">
-          <TouchableOpacity
-            className="flex-1 bg-surfaceContainerLow rounded-[20px] overflow-hidden shadow-sm elevation-1"
-            onPress={() => setPopupData({ image: 'https://i.pinimg.com/736x/fe/8b/4f/fe8b4f05c091e9fd9807deac9b314f11.jpg', text: 'Main Promotion' })}
-          >
-            <Image
-              source={{ uri: 'https://i.pinimg.com/736x/fe/8b/4f/fe8b4f05c091e9fd9807deac9b314f11.jpg' }}
-              className="w-full flex-1 object-cover"
-            />
-            <View className="p-3">
-              <Text className="text-sm font-medium text-onSurface">Main Promotion</Text>
-            </View>
-          </TouchableOpacity>
-
-          <View className="flex-1 gap-4">
-            <TouchableOpacity
-              className="bg-surfaceContainerLow rounded-[20px] overflow-hidden shadow-sm elevation-1"
-              onPress={() => setPopupData({ image: 'https://i.pinimg.com/736x/25/7a/e3/257ae37b125853599f57cf8f0052653c.jpg', text: 'Secondary Promo' })}
-            >
-              <Image
-                source={{ uri: 'https://i.pinimg.com/736x/25/7a/e3/257ae37b125853599f57cf8f0052653c.jpg' }}
-                className="w-full h-[80px] object-cover"
-              />
-              <View className="p-3">
-                <Text className="text-sm font-medium text-onSurface">Secondary Promo</Text>
+        {/* INFO CHIPS + TIPS (tanpa strip Flash Sale) */}
+        <View className="px-4 mt-6 mb-6 z-0">
+          {/* Manfaat belanja */}
+          <View className="flex-row flex-wrap gap-2">
+            {benefits.map((b) => (
+              <View
+                key={b.label}
+                className="flex-row items-center bg-surfaceContainerLow rounded-full px-3 py-2"
+              >
+                <MaterialIcons name={b.icon} size={16} color="#0D47A1" />
+                <Text className="text-xs text-onSurface font-medium ml-1.5">{b.label}</Text>
               </View>
-            </TouchableOpacity>
+            ))}
+          </View>
 
-            <TouchableOpacity
-              className="bg-surfaceContainerLow rounded-[20px] overflow-hidden shadow-sm elevation-1"
-              onPress={() => setPopupData({ image: 'https://i.pinimg.com/736x/25/7a/e3/257ae37b125853599f57cf8f0052653c.jpg', text: 'Special Offer' })}
-            >
-              <Image
-                source={{ uri: 'https://i.pinimg.com/736x/25/7a/e3/257ae37b125853599f57cf8f0052653c.jpg' }}
-                className="w-full h-[80px] object-cover"
-              />
-              <View className="p-3">
-                <Text className="text-sm font-medium text-onSurface">Special Offer</Text>
-              </View>
-            </TouchableOpacity>
+          {/* Tips / info penting */}
+          <View className="mt-4 bg-primaryContainer rounded-[12px] px-3 py-2.5 flex-row items-center">
+            <MaterialIcons name="lightbulb" size={16} color="#0D47A1" />
+            <Text className="flex-1 text-xs text-onSurface ml-2 leading-4">
+              Tips: semua produk bergaransi resmi 1 tahun & bisa dikembalikan 7 hari. Gunakan
+              filter untuk penawaran terbaik.
+            </Text>
           </View>
         </View>
+
+        {iklanLoading ? (
+          <View className="px-4 mb-10 flex-row gap-4 z-0 h-[210px]">
+            <Skeleton className="flex-1 h-full rounded-[20px]" />
+            <View className="flex-1 gap-4 h-full">
+              <Skeleton className="flex-1 rounded-[20px]" />
+              <Skeleton className="flex-1 rounded-[20px]" />
+            </View>
+          </View>
+        ) : iklan.length > 0 ? (
+          <View className="px-4 mb-10 flex-row gap-4 z-0">
+            {iklan[0] ? (
+              <TouchableOpacity
+                className="flex-1 bg-surfaceContainerLow rounded-[20px] overflow-hidden shadow-sm elevation-1"
+                onPress={() => openPromo(iklan[0])}
+              >
+                <Image
+                  source={{ uri: iklan[0].image }}
+                  className="w-full flex-1 object-cover"
+                />
+                <View className="p-3">
+                  <Text className="text-sm font-medium text-onSurface">
+                    {iklan[0].title}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <View className="flex-1" />
+            )}
+
+            <View className="flex-1 gap-4">
+              {iklan[1] ? (
+                <TouchableOpacity
+                  className="bg-surfaceContainerLow rounded-[20px] overflow-hidden shadow-sm elevation-1"
+                  onPress={() => openPromo(iklan[1])}
+                >
+                  <Image
+                    source={{ uri: iklan[1].image }}
+                    className="w-full h-[80px] object-cover"
+                  />
+                  <View className="p-3">
+                    <Text className="text-sm font-medium text-onSurface">
+                      {iklan[1].title}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <View className="flex-1 bg-surfaceContainerLow rounded-[20px]" />
+              )}
+
+              {iklan[2] ? (
+                <TouchableOpacity
+                  className="bg-surfaceContainerLow rounded-[20px] overflow-hidden shadow-sm elevation-1"
+                  onPress={() => openPromo(iklan[2])}
+                >
+                  <Image
+                    source={{ uri: iklan[2].image }}
+                    className="w-full h-[80px] object-cover"
+                  />
+                  <View className="p-3">
+                    <Text className="text-sm font-medium text-onSurface">
+                      {iklan[2].title}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <View className="flex-1 bg-surfaceContainerLow rounded-[20px]" />
+              )}
+            </View>
+          </View>
+        ) : null}
 
         {/* ARTIKEL ACCORDION SLIDER (AMBIL DATA DARI ENDPOINT DB) */}
         <View className="mb-10 z-0">
@@ -500,7 +710,10 @@ export default function Home() {
             articles={articles}
             loading={articlesLoading}
             error={articlesError}
-            onArticlePress={(a) => setPopupData({ image: a.image, text: a.title, body: a.body })}
+            onArticlePress={(a) => {
+              setCurrentArticle(a);
+              router.push(`/artikel/${a.id ?? 'x'}`);
+            }}
           />
         </View>
 
@@ -579,8 +792,8 @@ export default function Home() {
         >
           <Pressable onPress={() => { }}>
             <View className="bg-surface rounded-[20px] overflow-hidden w-full max-w-[400px]">
-              {popupData?.image && (
-                <Image source={{ uri: popupData?.image }} style={{ width: '100%', height: 220 }} resizeMode="cover" />
+              {popupData && (
+                <ImageWithFallback uri={popupData?.image} style={{ width: '100%', height: 220 }} />
               )}
               <ScrollView style={{ maxHeight: 280 }} contentContainerStyle={{ padding: 20 }}>
                 <Text className="text-xl font-bold text-onSurface mb-3">{popupData?.text}</Text>
