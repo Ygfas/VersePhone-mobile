@@ -1,6 +1,7 @@
 import React from 'react';
 import { TouchableOpacity, Text, View } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useThemeMode } from '../store/theme-store';
 
 // Size mappings for M3 Expressive Scale
 const sizes = {
@@ -35,7 +36,7 @@ export const Button = ({
     textStyle += ' text-onSecondaryContainer';
     iconColor = '#0D47A1';
   } else if (mode === 'outlined') {
-    baseStyle += ' border border-outline bg-transparent';
+    baseStyle += ' border border-outline dark:border-[#334155] bg-transparent';
     textStyle += ' text-primary';
     iconColor = '#2196F3';
   }
@@ -55,8 +56,9 @@ export const Button = ({
 
 export const IconButton = ({ icon, mode = 'standard', size = 'm', onPress, className = '' }) => {
   const s = sizes[size] || sizes.m;
+  const isDark = useThemeMode();
   let baseStyle = `items-center justify-center rounded-full ${s.height}`;
-  let iconColor = '#0D47A1';
+  let iconColor = isDark ? '#2196F3' : '#0D47A1';
 
   // Override size for width to make a circle
   const wClass = s.height.replace('h-', 'w-');
@@ -66,10 +68,10 @@ export const IconButton = ({ icon, mode = 'standard', size = 'm', onPress, class
     baseStyle += ' bg-primary';
     iconColor = '#FFFFFF';
   } else if (mode === 'tonal') {
-    baseStyle += ' bg-secondaryContainer';
-    iconColor = '#0D47A1';
+    baseStyle += ' bg-secondaryContainer dark:bg-[#1E293B]';
+    iconColor = isDark ? '#E3F2FD' : '#0D47A1';
   } else if (mode === 'outlined') {
-    baseStyle += ' border border-outline bg-transparent';
+    baseStyle += ' border border-outline dark:border-[#334155] bg-transparent';
     iconColor = '#2196F3';
   } else {
     // standard - transparent

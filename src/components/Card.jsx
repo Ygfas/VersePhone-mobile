@@ -13,11 +13,11 @@ export const Card = ({
 }) => {
   let baseStyle = 'rounded-[20px] overflow-hidden';
   if (mode === 'filled') {
-    baseStyle += ' bg-surfaceContainerHighest';
+    baseStyle += ' bg-surfaceContainerHighest dark:bg-[#334155]';
   } else if (mode === 'elevated') {
-    baseStyle += ' bg-surfaceContainerLow shadow-sm elevation-1';
+    baseStyle += ' bg-surfaceContainerLow dark:bg-[#1E293B] shadow-sm elevation-1';
   } else if (mode === 'outlined') {
-    baseStyle += ' border border-outlineVariant bg-surface';
+    baseStyle += ' border border-outlineVariant dark:border-[#334155] bg-surface dark:bg-[#0F172A]';
   }
 
   const renderContent = () => {
@@ -42,8 +42,8 @@ export const Card = ({
             <Image source={{ uri: imageUri }} className="w-[100px] h-full object-cover" />
           )}
           <View className="flex-1 p-5 justify-center relative">
-            {headline && <Text className="text-onSurface text-lg font-bold mb-1">{headline}</Text>}
-            {body && <Text className="text-onSurfaceVariant text-sm">{body}</Text>}
+            {headline && <Text className="text-onSurface dark:text-[#E3F2FD] text-lg font-bold mb-1">{headline}</Text>}
+            {body && <Text className="text-onSurfaceVariant dark:text-[#90CAF9] text-sm">{body}</Text>}
             {children}
           </View>
         </View>
@@ -57,8 +57,8 @@ export const Card = ({
           <Image source={{ uri: imageUri }} className="w-full h-[128px] object-cover rounded-t-[20px]" />
         )}
         <View className="p-5 flex-1 relative justify-center">
-          {headline && <Text className="text-onSurface text-lg font-bold mb-1 text-center">{headline}</Text>}
-          {body && <Text className="text-onSurfaceVariant text-sm text-center">{body}</Text>}
+          {headline && <Text className="text-onSurface dark:text-[#E3F2FD] text-lg font-bold mb-1 text-center">{headline}</Text>}
+          {body && <Text className="text-onSurfaceVariant dark:text-[#90CAF9] text-sm text-center">{body}</Text>}
           {children}
         </View>
       </View>

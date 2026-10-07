@@ -9,6 +9,7 @@ import ImageWithFallback from '../../components/ImageWithFallback';
 import { setCurrentArticle } from '../../store/article-view';
 import { setCurrentPromo } from '../../store/promo-view';
 import { useThemeMode } from '../../store/theme-store';
+import { useTranslatedText } from '../../store/language-store';
 
 // --- SUB-COMPONENT CARD VIDEO (Grid Thumbnail - Auto-play & Muted) ---
 function VideoGridCard({ videoSrc, onPress }) {
@@ -44,7 +45,7 @@ function VideoGridCard({ videoSrc, onPress }) {
   return (
     <TouchableOpacity
       style={{ width: '48.5%' }}
-      className="aspect-video bg-surfaceContainerHighest rounded-md items-center justify-center relative overflow-hidden"
+      className="aspect-video bg-surfaceContainerHighest dark:bg-[#334155] rounded-md items-center justify-center relative overflow-hidden"
       onPress={onPress}
       activeOpacity={0.8}
     >
@@ -112,7 +113,7 @@ const VideoGrid = ({ onSelectVideo }) => {
 
   return (
     <View className="flex">
-      <View className="px-3 flex-row flex-wrap justify-center gap-2 z-0 shadow-md bg-slate-300 py-4">
+      <View className="px-3 flex-row flex-wrap justify-center gap-2 z-0 shadow-md bg-slate-300 dark:bg-[#1E293B] py-4">
         {videoList.map((item) => (
           <VideoGridCard
             key={item.id}
@@ -240,8 +241,10 @@ function Skeleton({ className = '' }) {
 
 // --- ARTICLE SLIDER COMPONENT ---
 function ArticleSlider({ articles, onArticlePress, loading, error }) {
+  const isDarkMode = useThemeMode();
   const { width } = useWindowDimensions();
   const CARD_WIDTH = width - 32;
+  const tReadMore = useTranslatedText('Baca selengkapnya');
 
   if (loading) {
     return (
@@ -250,7 +253,7 @@ function ArticleSlider({ articles, onArticlePress, loading, error }) {
           <View
             key={i}
             style={{ width: (CARD_WIDTH - 12) / 2 }}
-            className="bg-surfaceContainerLow rounded-[12px] overflow-hidden pb-4"
+            className="bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[12px] overflow-hidden pb-4"
           >
             <Skeleton className="w-full h-[200px]" />
             <View className="p-4 gap-2.5">
@@ -268,7 +271,7 @@ function ArticleSlider({ articles, onArticlePress, loading, error }) {
   if (error) {
     return (
       <View className="px-4 py-2">
-        <Text className="text-red-500 text-sm">{error}</Text>
+        <Text className="text-red-500 dark:text-red-300 text-sm">{error}</Text>
       </View>
     );
   }
@@ -287,16 +290,16 @@ function ArticleSlider({ articles, onArticlePress, loading, error }) {
           activeOpacity={0.9}
           onPress={() => onArticlePress(item)}
           style={{ width: CARD_WIDTH }}
-          className="bg-surfaceContainerLow rounded-[12px] overflow-hidden elevation-2 shadow-sm"
+          className="bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[12px] overflow-hidden elevation-2 shadow-sm"
         >
           <ImageWithFallback uri={item.image} style={{ width: '100%', height: 200 }} />
           <View className="p-4">
-            <Text className="text-onSurface font-bold text-base mb-1" numberOfLines={2}>{item.title}</Text>
-            <Text className="text-onSurfaceVariant text-sm" numberOfLines={2}>{item.summary}</Text>
+            <Text className="text-onSurface dark:text-[#E3F2FD] font-bold text-base mb-1" numberOfLines={2}>{item.title}</Text>
+            <Text className="text-onSurfaceVariant dark:text-[#90CAF9] text-sm" numberOfLines={2}>{item.summary}</Text>
             <View className="flex-row items-center mt-3">
-              <MaterialIcons name="menu-book" size={14} color="#4F453D" />
-              <Text className="text-onSurfaceVariant text-xs ml-1">Baca selengkapnya</Text>
-            </View>
+                          <MaterialIcons name="menu-book" size={14} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
+                          <Text className="text-onSurfaceVariant dark:text-[#90CAF9] text-xs ml-1">{tReadMore}</Text>
+                        </View>
           </View>
         </TouchableOpacity>
       )}
@@ -310,18 +313,38 @@ export default function Home() {
   const isDarkMode = useThemeMode();
   const { height: screenHeight } = useWindowDimensions();
   const scrollY = useRef(new Animated.Value(0)).current;
+  const pillStickyThreshold = screenHeight * 0.75 - (insets.top + 60);
   const [showNotif, setShowNotif] = useState(false);
   const [showSearchHistory, setShowSearchHistory] = useState(false);
   const [popupData, setPopupData] = useState(null);
-  const [selectedVideo, setSelectedVideo] = useState(null);
+    const [selectedVideo, setSelectedVideo] = useState(null);
 
-  // Manfaat berbelanja (info chips)
-  const benefits = [
-    { icon: 'local-shipping', label: 'Gratis Ongkir' },
-    { icon: 'verified', label: 'Garansi Resmi' },
-    { icon: 'savings', label: 'Cashback 5%' },
-    { icon: 'payments', label: 'Bisa COD' },
-  ];
+    // Translated strings
+    const tSearch = useTranslatedText('Cari produk...');
+    const tNotif = useTranslatedText('Notifikasi');
+    const tNotifItem = useTranslatedText('Notifikasi');
+    const tNotifBody = useTranslatedText('Pesanan Anda sedang diproses. Harap menunggu konfirmasi dari penjual.');
+    const tTips = useTranslatedText('Tips: semua produk bergaransi resmi 1 tahun & bisa dikembalikan 7 hari. Gunakan filter untuk penawaran terbaik.');
+    const tBrand = useTranslatedText('Brand');
+    const tArticle = useTranslatedText('Artikel');
+    const tReadMore = useTranslatedText('Baca selengkapnya');
+    const tPopupTitle = useTranslatedText('Promo Spesial Minggu Ini');
+    const tPopupBody = useTranslatedText('Gratis ongkir se-Indonesia + cashback hingga 5% untuk semua smartphone. Berlaku sampai akhir bulan — jangan sampai kehabisan!');
+    const tProductName = useTranslatedText('Nama Produk');
+    const tClose = useTranslatedText('Tutup');
+    const tDetailInfo = useTranslatedText('Detail informasi akan ditampilkan di sini.');
+    const tSearchHistory = useTranslatedText('Pencarian sebelumnya');
+    const tLoadArticleFail = useTranslatedText('Gagal memuat artikel dari server');
+    const tConnectFail = useTranslatedText('Gagal terhubung ke server API artikel');
+    const tClickDetail = useTranslatedText('Klik untuk membaca detail artikel ini.');
+
+    // Manfaat berbelanja (info chips)
+    const benefits = [
+      { icon: 'local-shipping', label: useTranslatedText('Gratis Ongkir') },
+      { icon: 'verified', label: useTranslatedText('Garansi Resmi') },
+      { icon: 'savings', label: useTranslatedText('Cashback 5%') },
+      { icon: 'payments', label: useTranslatedText('Bisa COD') },
+    ];
 
   // Buka halaman detail promo (seperti halaman artikel)
   const openPromo = (p) => {
@@ -415,7 +438,7 @@ export default function Home() {
             return {
               id: item?.id_artikel || item?.id,
               title: item?.judul_artikel || item?.judul || item?.title,
-              summary: item?.ringkasan_artikel || item?.ringkasan || item?.summary || 'Klik untuk membaca detail artikel ini.',
+              summary: item?.ringkasan_artikel || item?.ringkasan || item?.summary || tClickDetail,
               body: item?.isi_artikel || item?.konten || item?.isi || item?.body,
               image,
             };
@@ -432,15 +455,15 @@ export default function Home() {
         });
         setArticles(mappedArticles);
       } else {
-        setArticlesError('Gagal memuat artikel dari server');
-      }
-    } catch (err) {
-      console.error('Error fetching articles:', err);
-      setArticlesError('Gagal terhubung ke server API artikel');
-    } finally {
-      setArticlesLoading(false);
-    }
-  };
+              setArticlesError(tLoadArticleFail);
+            }
+          } catch (err) {
+            console.error('Error fetching articles:', err);
+            setArticlesError(tConnectFail);
+          } finally {
+            setArticlesLoading(false);
+          }
+        };
 
   // Pop up iklan promo otomatis (sekali, 5 detik setelah halaman terbuka)
   useEffect(() => {
@@ -476,7 +499,7 @@ export default function Home() {
   ];
 
   return (
-    <View className="flex-1 bg-surface relative">
+    <View className="flex-1 bg-surface dark:bg-[#0F172A] relative">
 
       {/* ===== FLOATING HEADER ===== */}
       <Animated.View
@@ -495,59 +518,106 @@ export default function Home() {
             gap: 12,
             backgroundColor: scrollY.interpolate({
               inputRange: [screenHeight * 0.3, screenHeight * 0.5],
-              outputRange: ['rgba(254,248,244,0)', 'rgba(254,248,244,0.97)'],
+              outputRange: isDarkMode ? ['rgba(15,23,42,0)', 'rgba(15,23,42,0.97)'] : ['rgba(254,248,244,0)', 'rgba(254,248,244,0.97)'],
               extrapolate: 'clamp',
             }),
           },
         ]}
       >
-        <View className="flex-1 flex-row items-center bg-surfaceContainerHigh rounded-full h-[44px] px-4">
-          <MaterialIcons name="search" size={20} color="#4F453D" />
-          <TouchableOpacity
-            className="flex-1 ml-2"
-            onPress={() => {
-              setShowSearchHistory(!showSearchHistory);
-              setShowNotif(false);
-            }}
-          >
-            <Text className="text-onSurfaceVariant text-sm">Cari produk...</Text>
-          </TouchableOpacity>
+        <View className="flex-1 flex-row items-center bg-surfaceContainerHigh dark:bg-[#1E293B] rounded-full h-[44px] px-4">
+                  <MaterialIcons name="search" size={20} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
+                  <TouchableOpacity
+                    className="flex-1 ml-2"
+                    onPress={() => {
+                      setShowSearchHistory(!showSearchHistory);
+                      setShowNotif(false);
+                    }}
+                  >
+                    <Text className="text-onSurfaceVariant dark:text-[#90CAF9] text-sm">{tSearch}</Text>
+                  </TouchableOpacity>
           {showSearchHistory && (
             <TouchableOpacity onPress={() => setShowSearchHistory(false)}>
-              <MaterialIcons name="close" size={18} color="#4F453D" />
+              <MaterialIcons name="close" size={18} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
             </TouchableOpacity>
           )}
         </View>
 
         <TouchableOpacity
-          className="w-11 h-11 rounded-full bg-surfaceContainerHigh items-center justify-center"
+          className="w-11 h-11 rounded-full bg-surfaceContainerHigh dark:bg-[#1E293B] items-center justify-center"
           onPress={() => {
             setShowNotif(!showNotif);
             setShowSearchHistory(false);
           }}
         >
-          <MaterialIcons name="notifications" size={24} color="#0D47A1" />
+          <MaterialIcons name="notifications" size={24} color={isDarkMode ? "#E3F2FD" : "#0D47A1"} />
         </TouchableOpacity>
+      </Animated.View>
+
+      {/* PILLS + TIPS ABSOLUTE - hanya muncul saat scroll sampai pill (nempel di bawah header) */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: insets.top + 60,
+          left: 0,
+          right: 0,
+          zIndex: 40,
+          opacity: scrollY.interpolate({
+            inputRange: [pillStickyThreshold - 32, pillStickyThreshold],
+            outputRange: [0, 1],
+            extrapolate: 'clamp',
+          }),
+          transform: [
+            {
+              translateY: scrollY.interpolate({
+                inputRange: [pillStickyThreshold - 32, pillStickyThreshold],
+                outputRange: [-12, 0],
+                extrapolate: 'clamp',
+              }),
+            },
+          ],
+        }}
+      >
+        <View className="bg-surface dark:bg-[#0F172A] px-4 py-4 border-b border-outlineVariant dark:border-[#1E293B]">
+          <View className="flex-row flex-wrap justify-center gap-2 mb-3">
+                      {benefits.map((b) => (
+                        <View
+                          key={b.label}
+                          className="flex-row items-center bg-surfaceContainerLow dark:bg-[#1E293B] rounded-full px-3 py-2"
+                        >
+                          <MaterialIcons name={b.icon} size={16} color={isDarkMode ? '#90CAF9' : '#0D47A1'} />
+                          <Text className="text-xs text-onSurface dark:text-[#E3F2FD] font-medium ml-1.5">{b.label}</Text>
+                        </View>
+                      ))}
+                    </View>
+                    <View className="w-full items-center">
+                      <View className="bg-primaryContainer dark:bg-[#1E293B] rounded-[12px] px-4 py-2.5 flex-row items-center max-w-[90%]">
+                        <MaterialIcons name="lightbulb" size={16} color={isDarkMode ? '#90CAF9' : '#0D47A1'} />
+                        <Text className="flex-1 text-xs text-onSurface dark:text-[#E3F2FD] ml-2 leading-4 text-center">
+                          {tTips}
+                        </Text>
+                      </View>
+                    </View>
+        </View>
       </Animated.View>
 
       {/* SEARCH HISTORY OVERLAY */}
       {showSearchHistory && (
-        <View className="absolute left-4 right-4 bg-surfaceContainerHigh rounded-[16px] shadow-md elevation-4 z-50 overflow-hidden"
-          style={{ top: insets.top + 64 }}
-        >
-          {[1, 2, 3].map((i) => (
-            <View key={i} className="flex-row items-center p-4 border-b border-outlineVariant">
-              <View className="w-9 h-9 rounded-full bg-surfaceContainer items-center justify-center mr-3">
-                <MaterialIcons name="schedule" size={20} color="#4F453D" />
+              <View className="absolute left-4 right-4 bg-surfaceContainerHigh dark:bg-[#1E293B] rounded-[16px] shadow-md elevation-4 z-50 overflow-hidden"
+                style={{ top: insets.top + 64 }}
+              >
+                {[1, 2, 3].map((i) => (
+                  <View key={i} className="flex-row items-center p-4 border-b border-outlineVariant dark:border-[#334155]">
+                    <View className="w-9 h-9 rounded-full bg-surfaceContainer dark:bg-[#1E293B] items-center justify-center mr-3">
+                      <MaterialIcons name="schedule" size={20} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
+                    </View>
+                    <Text className="flex-1 text-sm text-onSurface dark:text-[#E3F2FD]">{tSearchHistory} {i}</Text>
+                    <TouchableOpacity>
+                      <MaterialIcons name="close" size={18} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
               </View>
-              <Text className="flex-1 text-sm text-onSurface">Pencarian sebelumnya {i}</Text>
-              <TouchableOpacity>
-                <MaterialIcons name="close" size={18} color="#4F453D" />
-              </TouchableOpacity>
-            </View>
-          ))}
-        </View>
-      )}
+            )}
 
       {/* NOTIFICATION FULL-SCREEN MODAL */}
       <Modal visible={showNotif} transparent animationType="fade">
@@ -557,80 +627,88 @@ export default function Home() {
         >
           <Pressable onPress={() => { }}>
             <View
-              className="bg-surface mx-4 rounded-[24px] overflow-hidden elevation-4"
+              className="bg-surface dark:bg-[#0F172A] mx-4 rounded-[24px] overflow-hidden elevation-4"
               style={{ marginTop: insets.top + 16 }}
             >
-              <View className="flex-row items-center justify-between px-5 py-4 border-b border-outlineVariant">
-                <Text className="text-lg font-bold text-onSurface">Notifikasi</Text>
-                <TouchableOpacity
-                  className="w-9 h-9 rounded-full bg-surfaceContainerHigh items-center justify-center"
-                  onPress={() => setShowNotif(false)}
-                >
-                  <MaterialIcons name="close" size={20} color="#1F1B18" />
-                </TouchableOpacity>
-              </View>
+              <View className="flex-row items-center justify-between px-5 py-4 border-b border-outlineVariant dark:border-[#334155]">
+                              <Text className="text-lg font-bold text-onSurface dark:text-[#E3F2FD]">{tNotif}</Text>
+                              <TouchableOpacity
+                                className="w-9 h-9 rounded-full bg-surfaceContainerHigh dark:bg-[#1E293B] items-center justify-center"
+                                onPress={() => setShowNotif(false)}
+                              >
+                                <MaterialIcons name="close" size={20} color={isDarkMode ? "#E3F2FD" : "#1F1B18"} />
+                              </TouchableOpacity>
+                            </View>
 
-              <ScrollView style={{ maxHeight: 500 }} contentContainerStyle={{ padding: 16, gap: 8 }}>
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <TouchableOpacity
-                    key={i}
-                    className="flex-row items-center p-4 bg-surfaceContainerLow rounded-[16px]"
-                  >
-                    <View className="w-11 h-11 rounded-full bg-primaryContainer items-center justify-center mr-4">
-                      <MaterialIcons name="notifications" size={22} color="#8B5000" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-sm font-bold text-onSurface mb-0.5">Notifikasi {i}</Text>
-                      <Text className="text-xs text-onSurfaceVariant" numberOfLines={2}>Pesanan Anda sedang diproses. Harap menunggu konfirmasi dari penjual.</Text>
-                    </View>
-                    <Text className="text-xs text-onSurfaceVariant ml-2">2j</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                            <ScrollView style={{ maxHeight: 500 }} contentContainerStyle={{ padding: 16, gap: 8 }}>
+                              {[1, 2, 3, 4, 5].map((i) => (
+                                <TouchableOpacity
+                                  key={i}
+                                  className="flex-row items-center p-4 bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[16px]"
+                                >
+                                  <View className="w-11 h-11 rounded-full bg-primaryContainer dark:bg-[#334155] items-center justify-center mr-4">
+                                    <MaterialIcons name="notifications" size={22} color="#8B5000" />
+                                  </View>
+                                  <View className="flex-1">
+                                    <Text className="text-sm font-bold text-onSurface dark:text-[#E3F2FD] mb-0.5">{tNotifItem} {i}</Text>
+                                    <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9]" numberOfLines={2}>{tNotifBody}</Text>
+                                  </View>
+                                  <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] ml-2">2j</Text>
+                                </TouchableOpacity>
+                              ))}
+                            </ScrollView>
             </View>
           </Pressable>
         </Pressable>
       </Modal>
 
       {/* MAIN SCROLL CONTENT */}
-      <Animated.ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: false }
-        )}
-        scrollEventThrottle={16}
-      >
-        {/* AUTO BANNER CAROUSEL */}
-        <AutoBannerCarousel data={carouselData} />
+                  <Animated.ScrollView
+                    contentContainerStyle={{ paddingBottom: 40 }}
+                    onScroll={Animated.event(
+                      [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                      { useNativeDriver: false }
+                    )}
+                    scrollEventThrottle={16}
+                  >
+                    {/* AUTO BANNER CAROUSEL */}
+                    <AutoBannerCarousel data={carouselData} />
 
-        {/* VIDEO GRID */}
-        <VideoGrid onSelectVideo={(src) => setSelectedVideo(src)} />
+                    {/* FLOW PILLS - posisi normal di bawah carousel, fade saat sampai header */}
+                    <Animated.View
+                      style={{
+                        opacity: scrollY.interpolate({
+                          inputRange: [pillStickyThreshold - 32, pillStickyThreshold],
+                          outputRange: [1, 0],
+                          extrapolate: 'clamp',
+                        }),
+                      }}
+                    >
+                      <View className="bg-surface dark:bg-[#0F172A] px-4 py-4 border-b border-outlineVariant dark:border-[#1E293B]">
+                        <View className="flex-row flex-wrap justify-center gap-2 mb-3">
+                                    {benefits.map((b) => (
+                                      <View
+                                        key={b.label}
+                                        className="flex-row items-center bg-surfaceContainerLow dark:bg-[#1E293B] rounded-full px-3 py-2"
+                                      >
+                                        <MaterialIcons name={b.icon} size={16} color={isDarkMode ? '#90CAF9' : '#0D47A1'} />
+                                        <Text className="text-xs text-onSurface dark:text-[#E3F2FD] font-medium ml-1.5">{b.label}</Text>
+                                      </View>
+                                    ))}
+                                  </View>
+                                  <View className="w-full items-center">
+                                    <View className="bg-primaryContainer dark:bg-[#1E293B] rounded-[12px] px-4 py-2.5 flex-row items-center max-w-[90%]">
+                                      <MaterialIcons name="lightbulb" size={16} color={isDarkMode ? '#90CAF9' : '#0D47A1'} />
+                                      <Text className="flex-1 text-xs text-onSurface dark:text-[#E3F2FD] ml-2 leading-4 text-center">
+                                        {tTips}
+                                      </Text>
+                                    </View>
+                                  </View>
+                      </View>
+                    </Animated.View>
 
-        {/* INFO CHIPS + TIPS (tanpa strip Flash Sale) */}
-        <View className="px-4 mt-6 mb-6 z-0">
-          {/* Manfaat belanja */}
-          <View className="flex-row flex-wrap gap-2">
-            {benefits.map((b) => (
-              <View
-                key={b.label}
-                className="flex-row items-center bg-surfaceContainerLow rounded-full px-3 py-2"
-              >
-                <MaterialIcons name={b.icon} size={16} color="#0D47A1" />
-                <Text className="text-xs text-onSurface font-medium ml-1.5">{b.label}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Tips / info penting */}
-          <View className="mt-4 bg-primaryContainer rounded-[12px] px-3 py-2.5 flex-row items-center">
-            <MaterialIcons name="lightbulb" size={16} color="#0D47A1" />
-            <Text className="flex-1 text-xs text-onSurface ml-2 leading-4">
-              Tips: semua produk bergaransi resmi 1 tahun & bisa dikembalikan 7 hari. Gunakan
-              filter untuk penawaran terbaik.
-            </Text>
-          </View>
-        </View>
+                    {/* VIDEO GRID */}
+                    <VideoGrid onSelectVideo={(src) => setSelectedVideo(src)} />
 
         {iklanLoading ? (
           <View className="px-4 mb-10 flex-row gap-4 z-0 h-[210px]">
@@ -644,7 +722,7 @@ export default function Home() {
           <View className="px-4 mb-10 flex-row gap-4 z-0">
             {iklan[0] ? (
               <TouchableOpacity
-                className="flex-1 bg-surfaceContainerLow rounded-[20px] overflow-hidden shadow-sm elevation-1"
+                className="flex-1 bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[20px] overflow-hidden shadow-sm elevation-1"
                 onPress={() => openPromo(iklan[0])}
               >
                 <Image
@@ -652,7 +730,7 @@ export default function Home() {
                   className="w-full flex-1 object-cover"
                 />
                 <View className="p-3">
-                  <Text className="text-sm font-medium text-onSurface">
+                  <Text className="text-sm font-medium text-onSurface dark:text-[#E3F2FD]">
                     {iklan[0].title}
                   </Text>
                 </View>
@@ -664,7 +742,7 @@ export default function Home() {
             <View className="flex-1 gap-4">
               {iklan[1] ? (
                 <TouchableOpacity
-                  className="bg-surfaceContainerLow rounded-[20px] overflow-hidden shadow-sm elevation-1"
+                  className="bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[20px] overflow-hidden shadow-sm elevation-1"
                   onPress={() => openPromo(iklan[1])}
                 >
                   <Image
@@ -672,18 +750,18 @@ export default function Home() {
                     className="w-full h-[80px] object-cover"
                   />
                   <View className="p-3">
-                    <Text className="text-sm font-medium text-onSurface">
+                    <Text className="text-sm font-medium text-onSurface dark:text-[#E3F2FD]">
                       {iklan[1].title}
                     </Text>
                   </View>
                 </TouchableOpacity>
               ) : (
-                <View className="flex-1 bg-surfaceContainerLow rounded-[20px]" />
+                <View className="flex-1 bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[20px]" />
               )}
 
               {iklan[2] ? (
                 <TouchableOpacity
-                  className="bg-surfaceContainerLow rounded-[20px] overflow-hidden shadow-sm elevation-1"
+                  className="bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[20px] overflow-hidden shadow-sm elevation-1"
                   onPress={() => openPromo(iklan[2])}
                 >
                   <Image
@@ -691,35 +769,21 @@ export default function Home() {
                     className="w-full h-[80px] object-cover"
                   />
                   <View className="p-3">
-                    <Text className="text-sm font-medium text-onSurface">
+                    <Text className="text-sm font-medium text-onSurface dark:text-[#E3F2FD]">
                       {iklan[2].title}
                     </Text>
                   </View>
                 </TouchableOpacity>
               ) : (
-                <View className="flex-1 bg-surfaceContainerLow rounded-[20px]" />
+                <View className="flex-1 bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[20px]" />
               )}
             </View>
           </View>
         ) : null}
 
-        {/* ARTIKEL ACCORDION SLIDER (AMBIL DATA DARI ENDPOINT DB) */}
-        <View className="mb-10 z-0">
-          <Text className="px-4 mb-3 text-onSurface font-bold text-base">Artikel</Text>
-          <ArticleSlider
-            articles={articles}
-            loading={articlesLoading}
-            error={articlesError}
-            onArticlePress={(a) => {
-              setCurrentArticle(a);
-              router.push(`/artikel/${a.id ?? 'x'}`);
-            }}
-          />
-        </View>
-
         {/* HOME 3 CONTENT BRAND */}
-        <View className="relative h-[120px] bg-surfaceContainerHigh mb-12 justify-center z-0">
-          <Text className="text-base text-onSurface absolute top-3 left-4 font-bold">Brand</Text>
+                <View className="relative h-[120px] bg-surfaceContainerHigh dark:bg-[#1E293B] mb-12 justify-center z-0">
+                  <Text className="text-base text-onSurface dark:text-[#E3F2FD] absolute top-3 left-4 font-bold">{tBrand}</Text>
 
           <ScrollView
             horizontal
@@ -740,7 +804,7 @@ export default function Home() {
                     resizeMode="contain"
                   />
                 </View>
-                <Text className="text-xs font-semibold text-onSurface text-center">
+                <Text className="text-xs font-semibold text-onSurface dark:text-[#E3F2FD] text-center">
                   {brand.name}
                 </Text>
               </TouchableOpacity>
@@ -749,8 +813,8 @@ export default function Home() {
         </View>
 
         <View className="px-4 items-end mb-4 z-0">
-          <TouchableOpacity className="w-12 h-12 rounded-full bg-surface border border-outlineVariant items-center justify-center">
-            <MaterialIcons name="filter-list" size={20} color="#4F453D" />
+          <TouchableOpacity className="w-12 h-12 rounded-full bg-surface dark:bg-[#0F172A] border border-outlineVariant dark:border-[#334155] items-center justify-center">
+            <MaterialIcons name="filter-list" size={20} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
           </TouchableOpacity>
         </View>
 
@@ -759,7 +823,7 @@ export default function Home() {
             <TouchableOpacity
               key={i}
               style={{ width: '48%' }}
-              className="bg-surface border border-outlineVariant rounded-[8px] overflow-hidden elevation-1 shadow-sm"
+              className="bg-surface dark:bg-[#0F172A] border border-outlineVariant dark:border-[#334155] rounded-[8px] overflow-hidden elevation-1 shadow-sm"
               onPress={() => router.push('/detail')}
             >
               <Image
@@ -767,12 +831,26 @@ export default function Home() {
                 className="w-full h-[160px] object-cover"
               />
               <View className="p-3">
-                <Text className="text-onSurface font-bold text-sm mb-1" numberOfLines={2}>Nama Produk {i}</Text>
-                <Text className="text-primary font-bold text-sm">Rp 1.500.000</Text>
+                              <Text className="text-onSurface dark:text-[#E3F2FD] font-bold text-sm mb-1" numberOfLines={2}>{tProductName} {i}</Text>
+                              <Text className="text-primary dark:text-[#90CAF9] font-bold text-sm">Rp 1.500.000</Text>
               </View>
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* ARTIKEL ACCORDION SLIDER (AMBIL DATA DARI ENDPOINT DB) */}
+                <View className="mb-10 z-0">
+                  <Text className="px-4 mb-3 text-onSurface dark:text-[#E3F2FD] font-bold text-base">{tArticle}</Text>
+                  <ArticleSlider
+                    articles={articles}
+                    loading={articlesLoading}
+                    error={articlesError}
+                    onArticlePress={(a) => {
+                      setCurrentArticle(a);
+                      router.push(`/artikel/${a.id ?? 'x'}`);
+                    }}
+                  />
+                </View>
 
       </Animated.ScrollView>
 
@@ -785,34 +863,34 @@ export default function Home() {
       )}
 
       {/* POPUP MODAL PROMO/ARTICLE */}
-      <Modal visible={!!popupData} transparent animationType="fade">
-        <Pressable
-          className="flex-1 bg-black/60 items-center justify-center p-4"
-          onPress={() => setPopupData(null)}
-        >
-          <Pressable onPress={() => { }}>
-            <View className="bg-surface rounded-[20px] overflow-hidden w-full max-w-[400px]">
-              {popupData && (
-                <ImageWithFallback uri={popupData?.image} style={{ width: '100%', height: 220 }} />
-              )}
-              <ScrollView style={{ maxHeight: 280 }} contentContainerStyle={{ padding: 20 }}>
-                <Text className="text-xl font-bold text-onSurface mb-3">{popupData?.text}</Text>
-                <Text className="text-sm text-onSurfaceVariant leading-6">
-                  {popupData?.body ?? 'Detail informasi akan ditampilkan di sini.'}
-                </Text>
-              </ScrollView>
-              <View className="px-5 pb-5">
-                <TouchableOpacity
-                  className="bg-primary rounded-full py-3 items-center"
-                  onPress={() => setPopupData(null)}
-                >
-                  <Text className="text-white font-bold text-sm">Tutup</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Pressable>
-        </Pressable>
-      </Modal>
+            <Modal visible={!!popupData} transparent animationType="fade">
+              <Pressable
+                className="flex-1 bg-black/60 items-center justify-center p-4"
+                onPress={() => setPopupData(null)}
+              >
+                <Pressable onPress={() => { }}>
+                  <View className="bg-surface dark:bg-[#0F172A] rounded-[20px] overflow-hidden w-full max-w-[400px]">
+                    {popupData && (
+                      <ImageWithFallback uri={popupData?.image} style={{ width: '100%', height: 220 }} />
+                    )}
+                    <ScrollView style={{ maxHeight: 280 }} contentContainerStyle={{ padding: 20 }}>
+                      <Text className="text-xl font-bold text-onSurface dark:text-[#E3F2FD] mb-3">{tPopupTitle}</Text>
+                      <Text className="text-sm text-onSurfaceVariant dark:text-[#90CAF9] leading-6">
+                        {tPopupBody}
+                      </Text>
+                    </ScrollView>
+                    <View className="px-5 pb-5">
+                      <TouchableOpacity
+                        className="bg-primary rounded-full py-3 items-center"
+                        onPress={() => setPopupData(null)}
+                      >
+                        <Text className="text-white font-bold text-sm">{tClose}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </Pressable>
+              </Pressable>
+            </Modal>
     </View>
   );
 }

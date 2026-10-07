@@ -4,10 +4,14 @@ import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { TopAppBar } from '../../components/TopAppBar';
 import { useThemeMode, setDarkMode } from '../../store/theme-store';
+import { useLanguage, setLanguage, useTranslatedText } from '../../store/language-store';
 
 // --- ROW MENU SETTINGS ---
 function SettingsRow({ icon, title, value, onPress, right, isLast = false }) {
-  const borderClass = isLast ? '' : 'border-b border-outlineVariant';
+  const isDark = useThemeMode();
+  const tTitle = useTranslatedText(title);
+  const tValue = useTranslatedText(value);
+  const borderClass = isLast ? '' : 'border-b border-outlineVariant dark:border-[#334155]';
 
   return (
     <TouchableOpacity
@@ -15,20 +19,20 @@ function SettingsRow({ icon, title, value, onPress, right, isLast = false }) {
       activeOpacity={0.7}
       className={`flex-row items-center px-4 py-3.5 bg-transparent ${borderClass}`}
     >
-      <View className="w-10 h-10 rounded-full bg-primaryContainer items-center justify-center mr-3">
-        <MaterialIcons name={icon} size={22} color="#0D47A1" />
+      <View className="w-10 h-10 rounded-full bg-primaryContainer dark:bg-[#1E3A5F] items-center justify-center mr-3">
+        <MaterialIcons name={icon} size={22} color={isDark ? "#90CAF9" : "#0D47A1"} />
       </View>
 
-      <Text className="flex-1 text-[15px] text-onSurface">{title}</Text>
+      <Text className="flex-1 text-[15px] text-onSurface dark:text-[#E3F2FD]">{tTitle}</Text>
 
-      {value && (
-        <Text className="text-xs text-onSurfaceVariant mr-1">{value}</Text>
+      {tValue && (
+        <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] mr-1">{tValue}</Text>
       )}
 
       {right ? (
         right
       ) : (
-        <MaterialIcons name="chevron-right" size={22} color="#80756C" />
+        <MaterialIcons name="chevron-right" size={22} color={isDark ? "#9CA3AF" : "#80756C"} />
       )}
     </TouchableOpacity>
   );
@@ -36,10 +40,11 @@ function SettingsRow({ icon, title, value, onPress, right, isLast = false }) {
 
 // --- SECTION CARD ---
 function SettingsSection({ title, children }) {
+  const tTitle = useTranslatedText(title);
   return (
     <View className="mb-4">
-      <Text className="px-1 mb-2 text-base font-bold text-onSurface">{title}</Text>
-      <View className="bg-surfaceContainerLow rounded-[20px] overflow-hidden shadow-sm elevation-1">
+      <Text className="px-1 mb-2 text-base font-bold text-onSurface dark:text-[#E3F2FD]">{tTitle}</Text>
+      <View className="bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[20px] overflow-hidden shadow-sm elevation-1">
         {children}
       </View>
     </View>
@@ -49,10 +54,15 @@ function SettingsSection({ title, children }) {
 export default function More() {
   const router = useRouter();
   const isDarkMode = useThemeMode();
+  const lang = useLanguage();
   const [isNotifOn, setIsNotifOn] = useState(true);
+  const tHello = useTranslatedText('Halo, Pengunjung!');
+  const tSub = useTranslatedText('Masuk untuk akses pesanan & fitur lengkap');
+  const tLogin = useTranslatedText('Masuk');
+  const tRegister = useTranslatedText('Daftar');
 
   return (
-    <View className="flex-1 bg-surface">
+    <View className="flex-1 bg-surface dark:bg-[#0F172A]">
       <TopAppBar title="Akun" />
 
       <ScrollView
@@ -62,13 +72,13 @@ export default function More() {
         {/* BANNER PROFIL / LOGIN */}
         <View className="bg-primary rounded-[20px] p-5 shadow-sm elevation-2 mb-4">
           <View className="flex-row items-center">
-            <View className="w-14 h-14 rounded-full bg-white items-center justify-center mr-4">
+            <View className="w-14 h-14 rounded-full bg-white dark:bg-[#1E293B] items-center justify-center mr-4">
               <MaterialIcons name="person" size={30} color="#2196F3" />
             </View>
             <View className="flex-1">
-              <Text className="text-white text-lg font-bold">Halo, Pengunjung!</Text>
+              <Text className="text-white text-lg font-bold">{tHello}</Text>
               <Text className="text-white/85 text-xs mt-1">
-                Masuk untuk akses pesanan & fitur lengkap
+                {tSub}
               </Text>
             </View>
           </View>
@@ -77,16 +87,16 @@ export default function More() {
             <TouchableOpacity
               onPress={() => router.push('/login')}
               activeOpacity={0.8}
-              className="flex-1 bg-white rounded-full h-11 items-center justify-center"
+              className="flex-1 bg-white dark:bg-[#1E293B] rounded-full h-11 items-center justify-center"
             >
-              <Text className="text-primary font-bold text-sm">Masuk</Text>
+              <Text className="text-primary dark:text-[#90CAF9] font-bold text-sm">{tLogin}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push('/signup')}
               activeOpacity={0.8}
               className="flex-1 border border-white/70 rounded-full h-11 items-center justify-center"
             >
-              <Text className="text-white font-bold text-sm">Daftar</Text>
+              <Text className="text-white font-bold text-sm">{tRegister}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -140,8 +150,8 @@ export default function More() {
           <SettingsRow
             icon="language"
             title="Bahasa"
-            value="Indonesia"
-            onPress={() => {}}
+            value={lang === 'en' ? 'English' : 'Indonesia'}
+            onPress={() => setLanguage(lang === 'en' ? 'id' : 'en')}
             isLast
           />
         </SettingsSection>
@@ -156,7 +166,7 @@ export default function More() {
           <SettingsRow icon="share" title="Bagikan Aplikasi" onPress={() => {}} isLast />
         </SettingsSection>
 
-        <Text className="text-center text-xs text-onSurfaceVariant mt-2">
+        <Text className="text-center text-xs text-onSurfaceVariant dark:text-[#90CAF9] mt-2">
           Versi 1.0.0
         </Text>
       </ScrollView>

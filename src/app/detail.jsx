@@ -8,10 +8,13 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWishlist, addToWishlist, removeFromWishlist } from '../store/wishlist';
+import { useThemeMode } from '../store/theme-store';
+import { useTranslatedText } from '../store/language-store';
 import { IconButton, Button } from '../components/Button';
 import { Card } from '../components/Card';
 
 export default function Detail() {
+  const isDark = useThemeMode();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [selectedColor, setSelectedColor] = useState('Blue');
@@ -41,8 +44,22 @@ export default function Detail() {
 
   // Snackbar dengan aksi undo
   const [snackbar, setSnackbar] = useState(null); // { message, undoAction }
-  const snackAnim = useRef(new Animated.Value(0)).current;
-  const snackTimer = useRef(null);
+    const snackAnim = useRef(new Animated.Value(0)).current;
+    const snackTimer = useRef(null);
+
+    // Translated strings
+    const tBrandName = useTranslatedText('Brand Name');
+    const tProductName = useTranslatedText('Product Name Ultra');
+    const tSelectColor = useTranslatedText('Select Color:');
+    const tBuy = useTranslatedText('Buy');
+    const tDetailSpec = useTranslatedText('Detail Spek');
+    const tShareProduct = useTranslatedText('Bagikan Produk');
+    const tCopyLink = useTranslatedText('Salin Tautan');
+    const tCopied = useTranslatedText('Tersalin!');
+    const tShareOthers = useTranslatedText('Lainnya');
+    const tRemovedWishlist = useTranslatedText('Dihapus dari wishlist');
+    const tAddedWishlist = useTranslatedText('Ditambahkan ke wishlist');
+    const tUndo = useTranslatedText('Batal');
 
   const hideSnackbar = () => {
     if (snackTimer.current) clearTimeout(snackTimer.current);
@@ -71,23 +88,23 @@ export default function Detail() {
   const saved = wishlist.some((i) => i.id === WISHLIST_ID);
 
   const toggleWishlist = () => {
-    const item = {
-      id: WISHLIST_ID,
-      brand: 'Brand Name',
-      name: productName,
-      ram: productVariant,
-      price: productPrice,
-      image: productImage,
-    };
+      const item = {
+        id: WISHLIST_ID,
+        brand: 'Brand Name',
+        name: productName,
+        ram: productVariant,
+        price: productPrice,
+        image: productImage,
+      };
 
-    if (saved) {
-      removeFromWishlist(WISHLIST_ID);
-      showSnackbar('Dihapus dari wishlist', () => addToWishlist(item));
-    } else {
-      addToWishlist(item);
-      showSnackbar('Ditambahkan ke wishlist', () => removeFromWishlist(WISHLIST_ID));
-    }
-  };
+      if (saved) {
+        removeFromWishlist(WISHLIST_ID);
+        showSnackbar(tRemovedWishlist, () => addToWishlist(item));
+      } else {
+        addToWishlist(item);
+        showSnackbar(tAddedWishlist, () => removeFromWishlist(WISHLIST_ID));
+      }
+    };
 
   // Tautan saat ini untuk mengakses produk (deep link Expo)
   const getShareUrl = () => createURL('/detail');
@@ -186,7 +203,7 @@ export default function Detail() {
   ];
 
   return (
-    <View className="flex-1 bg-surface pt-12">
+    <View className="flex-1 bg-surface dark:bg-[#0F172A] pt-12">
       {/* Top App Bar */}
       <View className="flex-row items-center px-4 mb-4">
         <IconButton icon="arrow-back" size="m" onPress={() => router.back()} className="mr-2" />
@@ -200,7 +217,7 @@ export default function Detail() {
         {/* Card Produk - Diakalin dengan menghapus imageUri dan memakai Image murni */}
         <Card
           mode="filled"
-          className="h-[260px] rounded-[10px] overflow-hidden bg-white relative border border-blue-500"
+          className="h-[260px] rounded-[10px] overflow-hidden bg-white dark:bg-[#1E293B] relative border border-blue-500 dark:border-[#334155]"
         >
           {/* GAMBAR: Tambahkan bottom: 0 agar benar-benar ditarik pas ke tepi bawah */}
           <Image
@@ -212,25 +229,25 @@ export default function Detail() {
           {/* KONTEN TEKS: Diberi marginLeft 33.33% agar mulai setelah gambar, dan lebarnya 66.67% (2/3) */}
           <View style={{ marginLeft: '33.33%', width: '66.67%' }} className="h-full p-3 justify-between pr-4">
             <View>
-              <Text className="text-xs text-outline font-semibold tracking-wider uppercase">
-                Brand Name
-              </Text>
-              <Text className="text-lg text-onSurface font-bold mt-0.5" numberOfLines={1}>
-                Product Name Ultra
-              </Text>
+              <Text className="text-xs text-outline dark:text-[#E3F2FD] font-semibold tracking-wider uppercase">
+                              {tBrandName}
+                            </Text>
+                            <Text className="text-lg text-onSurface dark:text-[#E3F2FD] font-bold mt-0.5" numberOfLines={1}>
+                              {tProductName}
+                            </Text>
 
               <View className="flex-row items-center mt-2 gap-2">
                 <View className="py-0.5 rounded">
-                  <Text className="text-xs text-onSurfaceVariant font-medium">12GB/256GB</Text>
+                  <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] font-medium">12GB/256GB</Text>
                 </View>
               </View>
 
               {/* Harga Produk */}
-              <Text className="text-xl font-bold text-primary mt-2">Rp 21.999.000</Text>
+              <Text className="text-xl font-bold text-primary dark:text-[#90CAF9] mt-2">Rp 21.999.000</Text>
 
               {/* Select Color (3 Warna) */}
-              <View className="mt-3">
-                <Text className="text-xs text-outline mb-1.5 font-medium">Select Color:</Text>
+                            <View className="mt-3">
+                              <Text className="text-xs text-outline dark:text-[#E3F2FD] mb-1.5 font-medium">{tSelectColor}</Text>
                 <View className="flex-row items-center gap-2">
                   {colors.map((c) => {
                     const isSelected = selectedColor === c.name;
@@ -239,8 +256,8 @@ export default function Detail() {
                       <TouchableOpacity
                         key={c.name}
                         onPress={() => setSelectedColor(c.name)}
-                        // Wrapper menjadi pill (bg-slate-200) hanya saat dipilih
-                        className={`flex-row items-center rounded-full ${isSelected ? 'bg-slate-200 p-1 pr-3' : 'p-1'
+                        // Wrapper menjadi pill (bg-slate-200 dark:bg-slate-700) hanya saat dipilih
+                        className={`flex-row items-center rounded-full ${isSelected ? 'bg-slate-200 dark:bg-slate-700 p-1 pr-3' : 'p-1'
                           }`}
                       >
                         {/* Lingkaran Warna */}
@@ -252,7 +269,7 @@ export default function Detail() {
 
                         {/* LABEL NAMA WARNA */}
                         {isSelected && (
-                          <Text className="text-sm font-bold text-slate-700 ml-1.5">
+                          <Text className="text-sm font-bold text-slate-700 dark:text-[#E3F2FD] ml-1.5">
                             {c.name}
                           </Text>
                         )}
@@ -264,9 +281,9 @@ export default function Detail() {
             </View>
 
             {/* Tombol Sementara (Buy) */}
-            <View className="w-[108px] mb-2">
-              <Button title="Buy" icon="shopping-cart" mode="filled" size="s" />
-            </View>
+                        <View className="w-[108px] mb-2">
+                          <Button title={tBuy} icon="shopping-cart" mode="filled" size="s" />
+                        </View>
           </View>
 
           {/* Tombol Bookmark: tersimpan = filled bold, bisa dihapus */}
@@ -281,21 +298,21 @@ export default function Detail() {
         </Card>
 
         {/* Judul Detail Spek di luar/di atas Box */}
-        <View className="mt-2">
-          <Text className="text-lg text-onSurface font-bold mb-3">Detail Spek</Text>
+                <View className="mt-2">
+                  <Text className="text-lg text-onSurface dark:text-[#E3F2FD] font-bold mb-3">{tDetailSpec}</Text>
 
           {/* Box Container Spek */}
-          <View className="bg-surfaceContainerHigh rounded-[10px] p-3">
+          <View className="bg-surfaceContainerHigh dark:bg-[#1E293B] rounded-[10px] p-3">
             {specs.map((item, index) => {
               const isEven = index % 2 === 0;
               return (
                 <View
                   key={index}
-                  className={`flex-row justify-between items-center py-3 ${isEven ? 'bg-surfaceContainerHigh' : 'bg-blue-200'
+                  className={`flex-row justify-between items-center py-3 ${isEven ? 'bg-surfaceContainerHigh dark:bg-[#1E293B]' : 'bg-blue-200 dark:bg-[#1E3A5F]'
                     }`}
                 >
-                  <Text className="text-sm font-medium text-blue-500 flex-1 p-2">{item.label}</Text>
-                  <Text className="text-sm font-semibold text-onSurface flex-1 text-right p-2">
+                  <Text className="text-sm font-medium text-blue-500 dark:text-[#90CAF9] flex-1 p-2">{item.label}</Text>
+                  <Text className="text-sm font-semibold text-onSurface dark:text-[#E3F2FD] flex-1 text-right p-2">
                     {item.value}
                   </Text>
                 </View>
@@ -321,7 +338,7 @@ export default function Detail() {
 
           {/* Sheet geser dari bawah, nempel penuh di tepi bawah */}
           <Animated.View
-            className="bg-surface rounded-t-[24px] px-6 pt-3"
+            className="bg-surface dark:bg-[#0F172A] rounded-t-[24px] px-6 pt-3"
             style={{
               paddingBottom: insets.bottom + 16,
               transform: [
@@ -336,38 +353,38 @@ export default function Detail() {
           >
             <Pressable onPress={(e) => e.stopPropagation()}>
               {/* Handle */}
-              <View className="w-10 h-1 rounded-full bg-slate-300 self-center mb-4" />
+              <View className="w-10 h-1 rounded-full bg-slate-300 dark:bg-[#1E293B] self-center mb-4" />
 
               {/* Header */}
-              <View className="flex-row items-center justify-between mb-4">
-                <Text className="text-lg font-bold text-onSurface">Bagikan Produk</Text>
+                            <View className="flex-row items-center justify-between mb-4">
+                              <Text className="text-lg font-bold text-onSurface dark:text-[#E3F2FD]">{tShareProduct}</Text>
                 <TouchableOpacity
                   onPress={closeShare}
-                  className="w-9 h-9 rounded-full bg-surfaceContainerHigh items-center justify-center"
+                  className="w-9 h-9 rounded-full bg-surfaceContainerHigh dark:bg-[#1E293B] items-center justify-center"
                   activeOpacity={0.7}
                 >
-                  <MaterialIcons name="close" size={20} color="#1F1B18" />
+                  <MaterialIcons name="close" size={20} color={isDark ? "#E3F2FD" : "#1F1B18"} />
                 </TouchableOpacity>
               </View>
 
               {/* Preview Produk */}
-              <View className="flex-row items-center bg-surfaceContainerLow rounded-[16px] p-3">
+              <View className="flex-row items-center bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[16px] p-3">
                 <Image
                   source={{ uri: productImage }}
-                  className="w-12 h-12 rounded-[10px] bg-surfaceContainerHighest object-cover"
+                  className="w-12 h-12 rounded-[10px] bg-surfaceContainerHighest dark:bg-[#334155] object-cover"
                 />
                 <View className="flex-1 ml-3">
-                  <Text className="text-sm font-bold text-onSurface" numberOfLines={1}>
+                  <Text className="text-sm font-bold text-onSurface dark:text-[#E3F2FD]" numberOfLines={1}>
                     {productName} {productVariant}
                   </Text>
-                  <Text className="text-sm font-bold text-primary mt-0.5">
+                  <Text className="text-sm font-bold text-primary dark:text-[#90CAF9] mt-0.5">
                     {productPrice}
                   </Text>
                 </View>
               </View>
 
               {/* Grid Platform (12 platform, bisa discroll) */}
-              <Text className="text-xs text-onSurfaceVariant font-semibold mt-5 mb-3">
+              <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] font-semibold mt-5 mb-3">
                 Bagikan ke
               </Text>
               <ScrollView
@@ -396,7 +413,7 @@ export default function Detail() {
                         color={app.iconColor || '#FFFFFF'}
                       />
                     </View>
-                    <Text className="text-[10px] text-onSurfaceVariant text-center mt-1.5" numberOfLines={1}>
+                    <Text className="text-[10px] text-onSurfaceVariant dark:text-[#90CAF9] text-center mt-1.5" numberOfLines={1}>
                       {app.label}
                     </Text>
                   </TouchableOpacity>
@@ -411,22 +428,22 @@ export default function Detail() {
                   className="flex-1 bg-primary rounded-full h-11 items-center justify-center flex-row"
                 >
                   <MaterialIcons
-                    name={copied ? 'check' : 'link'}
-                    size={18}
-                    color="#FFFFFF"
-                  />
-                  <Text className="text-white font-bold text-sm ml-1.5">
-                    {copied ? 'Tersalin!' : 'Salin Tautan'}
-                  </Text>
+                                      name={copied ? 'check' : 'link'}
+                                      size={18}
+                                      color="#FFFFFF"
+                                    />
+                                    <Text className="text-white font-bold text-sm ml-1.5">
+                                      {copied ? tCopied : tCopyLink}
+                                    </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={handleMoreShare}
                   activeOpacity={0.8}
-                  className="flex-1 border border-outline rounded-full h-11 items-center justify-center flex-row"
+                  className="flex-1 border border-outline dark:border-[#334155] rounded-full h-11 items-center justify-center flex-row"
                 >
                   <MaterialIcons name="share" size={18} color="#2196F3" />
-                  <Text className="text-primary font-bold text-sm ml-1.5">Lainnya</Text>
+                                    <Text className="text-primary dark:text-[#90CAF9] font-bold text-sm ml-1.5">{tShareOthers}</Text>
                 </TouchableOpacity>
               </View>
             </Pressable>
@@ -462,7 +479,7 @@ export default function Detail() {
               }}
               activeOpacity={0.8}
             >
-              <Text className="text-[#90CAF9] font-bold text-sm">Batal</Text>
+              <Text className="text-[#90CAF9] dark:text-[#E3F2FD] font-bold text-sm">{tUndo}</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
