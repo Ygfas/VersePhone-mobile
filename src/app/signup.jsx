@@ -5,30 +5,55 @@ import { TopAppBar } from '../components/TopAppBar';
 import { Button } from '../components/Button';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useThemeMode } from '../store/theme-store';
+import { useTranslatedText } from '../store/language-store';
 
 export default function SignUp() {
+  const isDark = useThemeMode();
   const router = useRouter();
   const [isChecked, setIsChecked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [touched, setTouched] = useState(false);
 
-  // Validasi password:
+    // Translated strings
+    const tSignUp = useTranslatedText('Sign Up');
+    const tLogin = useTranslatedText('Login');
+    const tNameOrUsername = useTranslatedText('Name atau Username');
+    const tEnterNameOrUsername = useTranslatedText('Masukkan Nama atau Username');
+    const tPhoneNumber = useTranslatedText('Nomor Seluler');
+    const tEnterPhoneNumber = useTranslatedText('Masukkan Nomor Seluler');
+    const tEmail = useTranslatedText('Email');
+    const tEnterEmail = useTranslatedText('Masukkan Email');
+    const tPassword = useTranslatedText('Password');
+    const tEnterPassword = useTranslatedText('Masukkan Password');
+    const tPasswordErrorLength = useTranslatedText('Password harus 1-8 karakter.');
+    const tPasswordErrorCapital = useTranslatedText('Karakter pertama harus huruf kapital (A-Z).');
+    const tPasswordErrorMix = useTranslatedText('Password harus kombinasi huruf dan angka.');
+    const tWeak = useTranslatedText('Lemah');
+    const tMedium = useTranslatedText('Sedang');
+    const tStrong = useTranslatedText('Kuat');
+    const tVeryStrong = useTranslatedText('Sangat Kuat');
+    const tPasswordSecurity = useTranslatedText('Keamanan password:');
+    const tPasswordRule = useTranslatedText('Ketentuan: 1-8 karakter, huruf depan kapital, dan kombinasi huruf & angka.');
+    const tIAgree = useTranslatedText('I agree');
+    const tOr = useTranslatedText('Or');
+    const tGoogle = useTranslatedText('Google');
   // - Panjang 1-8 karakter
   // - Karakter pertama (teks depan) harus huruf kapital
   // - Harus kombinasi huruf dan angka
   const validatePassword = (value) => {
-    if (value.length < 1 || value.length > 8) {
-      return 'Password harus 1-8 karakter.';
-    }
-    if (!/^[A-Z]/.test(value)) {
-      return 'Karakter pertama harus huruf kapital (A-Z).';
-    }
-    if (!/[A-Za-z]/.test(value) || !/[0-9]/.test(value)) {
-      return 'Password harus kombinasi huruf dan angka.';
-    }
-    return '';
-  };
+      if (value.length < 1 || value.length > 8) {
+        return tPasswordErrorLength;
+      }
+      if (!/^[A-Z]/.test(value)) {
+        return tPasswordErrorCapital;
+      }
+      if (!/[A-Za-z]/.test(value) || !/[0-9]/.test(value)) {
+        return tPasswordErrorMix;
+      }
+      return '';
+    };
 
   // Tingkat keamanan password: skor 0-4 (lemah -> kuat)
   // Dihitung dari panjang, huruf kapital, huruf kecil, angka, dan simbol.
@@ -63,7 +88,7 @@ export default function SignUp() {
   const canSubmit = isPasswordValid && isChecked;
 
   return (
-    <View className="flex-1 bg-surface">
+    <View className="flex-1 bg-surface dark:bg-[#0F172A]">
       <TopAppBar
         title="Sign Up"
         leftIcon="arrow-back"
@@ -71,32 +96,32 @@ export default function SignUp() {
       />
 
       <TouchableOpacity className="absolute top-[28px] right-4" onPress={() => router.push('/login')}>
-        <Text className="text-xl mt-7 text-primary font-medium">Login</Text>
+        <Text className="text-xl mt-7 text-primary dark:text-[#90CAF9] font-medium">Login</Text>
       </TouchableOpacity>
 
       <View className="p-4 mt-8 flex-1 items-center">
         {/* INPUT NAME / USERNAME */}
         <View className="w-full mb-6">
-          <Text className="text-xl font-medium text-black m-2">Name atau Username</Text>
-          <View className="flex-row items-center border border-outline rounded-full h-[56px] px-4 bg-surface">
-            <MaterialIcons name="person" size={24} color="#4F453D" style={{ marginRight: 12 }} />
+          <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">Name atau Username</Text>
+          <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
+            <MaterialIcons name="person" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
             <TextInput
-              className="flex-1 text-base text-onSurface"
+              className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
               placeholder="Masukkan Nama atau Username"
-              placeholderTextColor="#79747E"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
             />
           </View>
         </View>
 
         {/* INPUT NOMOR SELULER */}
         <View className="w-full mb-6">
-          <Text className="text-xl font-medium text-black m-2">Nomor Seluler</Text>
-          <View className="flex-row items-center border border-outline rounded-full h-[56px] px-4 bg-surface">
-            <MaterialIcons name="numbers" size={24} color="#4F453D" style={{ marginRight: 12 }} />
+          <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">Nomor Seluler</Text>
+          <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
+            <MaterialIcons name="numbers" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
             <TextInput
-              className="flex-1 text-base text-onSurface"
+              className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
               placeholder="Masukkan Nomor Seluler"
-              placeholderTextColor="#79747E"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
               keyboardType="phone-pad"
             />
           </View>
@@ -104,13 +129,13 @@ export default function SignUp() {
 
         {/* INPUT EMAIL */}
         <View className="w-full mb-6">
-          <Text className="text-xl font-medium text-black m-2">Email</Text>
-          <View className="flex-row items-center border border-outline rounded-full h-[56px] px-4 bg-surface">
-            <MaterialIcons name="mail" size={24} color="#4F453D" style={{ marginRight: 12 }} />
+          <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">Email</Text>
+          <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
+            <MaterialIcons name="mail" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
             <TextInput
-              className="flex-1 text-base text-onSurface"
+              className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
               placeholder="Masukkan Email"
-              placeholderTextColor="#79747E"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
               keyboardType="email-address"
               autoCapitalize="none"
             />
@@ -119,16 +144,16 @@ export default function SignUp() {
 
         {/* INPUT PASSWORD */}
         <View className="w-full mb-4">
-          <Text className="text-xl font-medium text-black m-2">Password</Text>
+          <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">Password</Text>
           <View
-            className={`flex-row items-center border rounded-full h-[56px] px-4 bg-surface ${touched && passwordError ? 'border-error' : 'border-outline'}`}
+            className={`flex-row items-center border rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A] ${touched && passwordError ? 'border-error' : 'border-outline dark:border-[#334155]'}`}
           >
-            <MaterialIcons name="vpn-key" size={24} color="#4F453D" style={{ marginRight: 12 }} />
+            <MaterialIcons name="vpn-key" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
             <TextInput
               secureTextEntry={!showPassword}
-              className="flex-1 text-base text-onSurface"
+              className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
               placeholder="Masukkan Password"
-              placeholderTextColor="#79747E"
+              placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
               value={password}
               onChangeText={setPassword}
               onBlur={() => setTouched(true)}
@@ -137,12 +162,12 @@ export default function SignUp() {
               <MaterialIcons
                 name={showPassword ? "visibility" : "visibility-off"}
                 size={22}
-                color="#4F453D"
+                color={isDark ? "#90CAF9" : "#4F453D"}
               />
             </TouchableOpacity>
           </View>
           {touched && !!passwordError && (
-            <Text className="text-xs text-error m-2">{passwordError}</Text>
+            <Text className="text-xs text-error dark:text-red-300 m-2">{passwordError}</Text>
           )}
 
           {/* INDIKATOR TINGKAT KEAMANAN PASSWORD */}
@@ -166,7 +191,7 @@ export default function SignUp() {
             </View>
           )}
 
-          <Text className="text-xs text-onSurfaceVariant m-2">
+          <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] m-2">
             Ketentuan: 1-8 karakter, huruf depan kapital, dan kombinasi huruf & angka.
           </Text>
         </View>
@@ -179,7 +204,7 @@ export default function SignUp() {
           >
             {isChecked && <MaterialIcons name="check" size={14} color="#FFFFFF" />}
           </TouchableOpacity>
-          <Text className="text-base text-onSurface">I agree</Text>
+          <Text className="text-base text-onSurface dark:text-[#E3F2FD]">I agree</Text>
         </View>
 
         {/* TOMBOL SIGN UP */}
@@ -192,16 +217,16 @@ export default function SignUp() {
           onPress={() => router.push('/login')}
         />
 
-        <Text className="text-base text-onSurface mb-2">Or</Text>
+        <Text className="text-base text-onSurface dark:text-[#E3F2FD] mb-2">Or</Text>
 
         {/* TOMBOL GOOGLE DENGAN IKON FONTAWESOME BERWARNA */}
         <TouchableOpacity
-          className="w-full flex-row items-center justify-center border border-outline rounded-full h-[48px] bg-surface"
+          className="w-full flex-row items-center justify-center border border-outline dark:border-[#334155] rounded-full h-[48px] bg-surface dark:bg-[#0F172A]"
           onPress={() => router.push('/overview')}
           activeOpacity={0.8}
         >
           <FontAwesome name="google" size={18} color="#EA4335" style={{ marginRight: 8 }} />
-          <Text className="text-onSurface font-medium text-base">Google</Text>
+          <Text className="text-onSurface dark:text-[#E3F2FD] font-medium text-base">Google</Text>
         </TouchableOpacity>
       </View>
     </View>

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, Image } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { TopAppBar } from '../../components/TopAppBar';
+import { useThemeMode } from '../../store/theme-store';
+import { T } from '../../store/language-store';
 
 // --- MOCK DATA PESANAN (UI ONLY) ---
 const orders = [
@@ -50,7 +52,7 @@ function StatusChip({ status }) {
   return (
     <View
       className={`flex-row items-center rounded-full px-3 py-1 ${
-        isPending ? 'bg-amber-100' : 'bg-green-100'
+        isPending ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-green-100 dark:bg-green-900/30'
       }`}
     >
       <MaterialIcons
@@ -60,10 +62,10 @@ function StatusChip({ status }) {
       />
       <Text
         className={`ml-1 text-xs font-semibold ${
-          isPending ? 'text-amber-900' : 'text-green-800'
+          isPending ? 'text-amber-900 dark:text-amber-200' : 'text-green-800 dark:text-green-300'
         }`}
       >
-        {isPending ? 'Pending' : 'Success'}
+        <T>{isPending ? 'Pending' : 'Berhasil'}</T>
       </Text>
     </View>
   );
@@ -71,14 +73,15 @@ function StatusChip({ status }) {
 
 // --- KARTU PESANAN ---
 function OrderCard({ order }) {
+  const isDark = useThemeMode();
   const isPending = order.status === 'pending';
 
   return (
-    <View className="bg-surfaceContainerLow rounded-[20px] p-4 shadow-sm elevation-1">
+    <View className="bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[20px] p-4 shadow-sm elevation-1">
       {/* Header: nomor pesanan + status */}
       <View className="flex-row items-center justify-between">
-        <Text className="text-xs font-medium text-onSurfaceVariant">
-          No. Pesanan {order.id}
+        <Text className="text-xs font-medium text-onSurfaceVariant dark:text-[#90CAF9]">
+          <T>No. Pesanan</T> {order.id}
         </Text>
         <StatusChip status={order.status} />
       </View>
@@ -87,24 +90,24 @@ function OrderCard({ order }) {
       <View className="flex-row items-center mt-3">
         <Image
           source={{ uri: order.image }}
-          className="w-16 h-16 rounded-[12px] bg-surfaceContainerHighest object-cover"
+          className="w-16 h-16 rounded-[12px] bg-surfaceContainerHighest dark:bg-[#334155] object-cover"
         />
         <View className="flex-1 ml-3">
-          <Text className="text-sm font-bold text-onSurface" numberOfLines={1}>
+          <Text className="text-sm font-bold text-onSurface dark:text-[#E3F2FD]" numberOfLines={1}>
             {order.name}
           </Text>
-          <Text className="text-xs text-onSurfaceVariant mt-0.5">
-            {order.qty} unit
+          <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] mt-0.5">
+            {order.qty} <T>unit</T>
           </Text>
         </View>
-        <Text className="text-sm font-bold text-primary">{order.price}</Text>
+        <Text className="text-sm font-bold text-primary dark:text-[#90CAF9]">{order.price}</Text>
       </View>
 
       {/* Footer: waktu + aksi */}
-      <View className="flex-row items-center justify-between border-t border-outlineVariant pt-3 mt-3">
+      <View className="flex-row items-center justify-between border-t border-outlineVariant dark:border-[#334155] pt-3 mt-3">
         <View className="flex-row items-center">
-          <MaterialIcons name="schedule" size={14} color="#80756C" />
-          <Text className="text-xs text-onSurfaceVariant ml-1">{order.date}</Text>
+          <MaterialIcons name="schedule" size={14} color={isDark ? "#9CA3AF" : "#80756C"} />
+          <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] ml-1">{order.date}</Text>
         </View>
 
         {isPending ? (
@@ -113,15 +116,15 @@ function OrderCard({ order }) {
             activeOpacity={0.8}
             className="bg-primary rounded-full h-10 px-5 items-center justify-center"
           >
-            <Text className="text-white text-xs font-bold">Bayar Sekarang</Text>
+            <Text className="text-white text-xs font-bold"><T>Bayar Sekarang</T></Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
             onPress={() => {}}
             activeOpacity={0.8}
-            className="border border-outline rounded-full h-10 px-5 items-center justify-center"
+            className="border border-outline dark:border-[#334155] rounded-full h-10 px-5 items-center justify-center"
           >
-            <Text className="text-primary text-xs font-bold">Beli Lagi</Text>
+            <Text className="text-primary dark:text-[#90CAF9] text-xs font-bold"><T>Beli Lagi</T></Text>
           </TouchableOpacity>
         )}
       </View>
@@ -130,19 +133,19 @@ function OrderCard({ order }) {
 }
 
 export default function History() {
-  const [activeTab, setActiveTab] = useState('All');
-  const tabs = ['All', 'Pending', 'Success'];
+  const [activeTab, setActiveTab] = useState('Semua');
+  const tabs = ['Semua', 'Pending', 'Berhasil'];
 
   const filteredOrders =
-    activeTab === 'All'
+    activeTab === 'Semua'
       ? orders
-      : orders.filter((o) => o.status === activeTab.toLowerCase());
+      : orders.filter((o) => (activeTab === 'Pending' ? o.status === 'pending' : o.status === 'success'));
 
   return (
-    <View className="flex-1 bg-surface">
-      <TopAppBar title="History" />
+    <View className="flex-1 bg-surface dark:bg-[#0F172A]">
+      <TopAppBar title="Riwayat" />
 
-      <View className="flex-row h-[48px] border-b border-outlineVariant">
+      <View className="flex-row h-[48px] border-b border-outlineVariant dark:border-[#334155]">
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -151,10 +154,10 @@ export default function History() {
           >
             <Text
               className={`text-sm font-medium ${
-                activeTab === tab ? 'text-primary' : 'text-onSurfaceVariant'
+                activeTab === tab ? 'text-primary dark:text-[#90CAF9]' : 'text-onSurfaceVariant dark:text-[#90CAF9]'
               }`}
             >
-              {tab}
+              <T>{tab}</T>
             </Text>
             {activeTab === tab && (
               <View className="absolute bottom-0 w-16 h-[3px] bg-primary rounded-t-full" />
@@ -167,8 +170,8 @@ export default function History() {
         {filteredOrders.length === 0 ? (
           <View className="items-center py-20">
             <MaterialIcons name="receipt-long" size={48} color="#90CAF9" />
-            <Text className="mt-3 text-sm text-onSurfaceVariant">
-              Belum ada pesanan
+            <Text className="mt-3 text-sm text-onSurfaceVariant dark:text-[#90CAF9]">
+              <T>Belum ada pesanan</T>
             </Text>
           </View>
         ) : (

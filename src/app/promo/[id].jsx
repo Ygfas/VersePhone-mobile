@@ -5,6 +5,7 @@ import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { TopAppBar } from '../../components/TopAppBar';
 import ImageWithFallback from '../../components/ImageWithFallback';
 import { useCurrentPromo } from '../../store/promo-view';
+import { T } from '../../store/language-store';
 
 // Halaman khusus Detail Promo (dibuka dari: strip Flash Sale & kartu promo di Home)
 export default function PromoPage() {
@@ -13,12 +14,12 @@ export default function PromoPage() {
 
   if (!promo) {
     return (
-      <View className="flex-1 bg-surface">
+      <View className="flex-1 bg-surface dark:bg-[#0F172A]">
         <TopAppBar title="Promo" leftIcon="arrow-back" onLeftPress={() => router.back()} />
         <View className="flex-1 items-center justify-center p-6">
           <MaterialIcons name="local-offer" size={48} color="#90CAF9" />
-          <Text className="text-sm text-onSurfaceVariant mt-3 text-center">
-            Promo tidak ditemukan. Kembali ke beranda untuk memilih promo.
+          <Text className="text-sm text-onSurfaceVariant dark:text-[#90CAF9] dark:text-[#E3F2FD] mt-3 text-center">
+            <T>Promo tidak ditemukan. Kembali ke beranda untuk memilih promo.</T>
           </Text>
         </View>
       </View>
@@ -31,7 +32,7 @@ export default function PromoPage() {
       : 'Detail promo ini akan segera hadir. Nantikan terus update dari kami!';
 
   return (
-    <View className="flex-1 bg-surface">
+    <View className="flex-1 bg-surface dark:bg-[#0F172A]">
       <TopAppBar title="Promo" leftIcon="arrow-back" onLeftPress={() => router.back()} />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
@@ -54,11 +55,11 @@ export default function PromoPage() {
         </View>
 
         <View className="px-4 pt-5">
-          <Text className="text-2xl font-bold text-onSurface leading-8">{promo.title}</Text>
+          <Text className="text-2xl font-bold text-onSurface dark:text-[#E3F2FD] leading-8">{promo.title}</Text>
 
           <View className="h-px bg-outlineVariant my-5" />
 
-          <Text className="text-[15px] text-onSurface leading-7">{safeBody}</Text>
+          <Text className="text-[15px] text-onSurface dark:text-[#E3F2FD] leading-7">{safeBody}</Text>
         </View>
       </ScrollView>
     </View>
