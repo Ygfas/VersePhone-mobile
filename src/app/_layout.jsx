@@ -9,7 +9,7 @@ import '../global.css';
 export default function RootLayout() {
   const isDark = useThemeMode();
   const { setColorScheme } = useColorScheme();
-  useEffect(() => { setColorScheme(isDark ? 'dark' : 'light'); }, [isDark]);
+  useEffect(() => { setColorScheme(isDark ? 'dark' : 'light'); }, [isDark, setColorScheme]);
   return (
     <View className={isDark ? 'dark flex-1' : 'flex-1'} style={{ flex: 1 }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />

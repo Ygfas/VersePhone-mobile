@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, ScrollView, Image, Text, TouchableOpacity, Modal, Pressable, FlatList, useWindowDimensions, Animated, InteractionManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -10,6 +10,7 @@ import { setCurrentArticle } from '../../store/article-view';
 import { setCurrentPromo } from '../../store/promo-view';
 import { useThemeMode } from '../../store/theme-store';
 import { useTranslatedText } from '../../store/language-store';
+import { useWishlist, addToWishlist, removeFromWishlist } from '../../store/wishlist';
 
 // --- SUB-COMPONENT CARD VIDEO (Grid Thumbnail - Auto-play & Muted) ---
 function VideoGridCard({ videoSrc, onPress }) {
@@ -137,19 +138,11 @@ function AutoBannerCarousel({ data }) {
   const loopData = [...data, ...data, ...data];
   const MID_OFFSET = data.length;
 
-  useEffect(() => {
-    setTimeout(() => {
-      flatListRef.current?.scrollToIndex({ index: MID_OFFSET, animated: false });
-    }, 50);
-    startTimer();
-    return () => clearTimer();
+  const clearTimer = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
   }, []);
 
-  const clearTimer = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-  };
-
-  const startTimer = () => {
+  const startTimer = useCallback(() => {
     clearTimer();
     timerRef.current = setInterval(() => {
       setActiveIndex((prev) => {
@@ -159,7 +152,18 @@ function AutoBannerCarousel({ data }) {
         return next % data.length;
       });
     }, 10000);
-  };
+  }, [clearTimer, MID_OFFSET, data.length]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      flatListRef.current?.scrollToIndex({ index: MID_OFFSET, animated: false });
+    }, 50);
+    startTimer();
+    return () => {
+      clearTimeout(t);
+      clearTimer();
+    };
+  }, [MID_OFFSET, clearTimer, startTimer]);
 
   const onScrollEnd = (e) => {
     const offsetX = e.nativeEvent.contentOffset.x;
@@ -218,7 +222,7 @@ function AutoBannerCarousel({ data }) {
 
 // --- SKELETON SHIMMER (placeholder saat konten masih load) ---
 function Skeleton({ className = '' }) {
-  const pulse = useRef(new Animated.Value(0.5)).current;
+  const [pulse] = useState(() => new Animated.Value(0.5));
 
   useEffect(() => {
     const loop = Animated.loop(
@@ -312,7 +316,7 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const isDarkMode = useThemeMode();
   const { height: screenHeight } = useWindowDimensions();
-  const scrollY = useRef(new Animated.Value(0)).current;
+  const [scrollY] = useState(() => new Animated.Value(0));
   const pillStickyThreshold = screenHeight * 0.75 - (insets.top + 60);
   const [showNotif, setShowNotif] = useState(false);
   const [showSearchHistory, setShowSearchHistory] = useState(false);
@@ -327,11 +331,14 @@ export default function Home() {
     const tTips = useTranslatedText('Tips: semua produk bergaransi resmi 1 tahun & bisa dikembalikan 7 hari. Gunakan filter untuk penawaran terbaik.');
     const tBrand = useTranslatedText('Brand');
     const tArticle = useTranslatedText('Artikel');
+    // eslint-disable-next-line no-unused-vars
     const tReadMore = useTranslatedText('Baca selengkapnya');
     const tPopupTitle = useTranslatedText('Promo Spesial Minggu Ini');
     const tPopupBody = useTranslatedText('Gratis ongkir se-Indonesia + cashback hingga 5% untuk semua smartphone. Berlaku sampai akhir bulan — jangan sampai kehabisan!');
+    // eslint-disable-next-line no-unused-vars
     const tProductName = useTranslatedText('Nama Produk');
     const tClose = useTranslatedText('Tutup');
+    // eslint-disable-next-line no-unused-vars
     const tDetailInfo = useTranslatedText('Detail informasi akan ditampilkan di sini.');
     const tSearchHistory = useTranslatedText('Pencarian sebelumnya');
     const tLoadArticleFail = useTranslatedText('Gagal memuat artikel dari server');
@@ -352,34 +359,62 @@ export default function Home() {
     router.push(`/promo/${p.id}`);
   };
 
-  // --- STATE DATA ARTIKEL DARI DATABASE ENDPOINT ---
+  // --- STATE DATA ARTIKEL / IKLAN / PRODUK DARI DATABASE ENDPOINT ---
   const [articles, setArticles] = useState([]);
   const [articlesLoading, setArticlesLoading] = useState(true);
   const [articlesError, setArticlesError] = useState(null);
-
-  // MEMANGGIL ENDPOINT API ARTIKEL NEXT.JS
-  useEffect(() => {
-    // Tunda fetch sampai layar selesai animasi/interaksi pertama,
-    // supaya render awal cepat dan aplikasi tidak terasa berat.
-    const task = InteractionManager.runAfterInteractions(() => {
-      fetchArticles();
-    });
-    return () => task.cancel();
-  }, []);
-
-  // --- STATE DATA IKLAN/PROMO DARI DATABASE ENDPOINT ---
   const [iklan, setIklan] = useState([]);
   const [iklanLoading, setIklanLoading] = useState(true);
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState(null);
 
-  // MEMANGGIL ENDPOINT API IKLAN NEXT.JS (tabel iklan_random)
-  useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => {
-      fetchIklan();
-    });
-    return () => task.cancel();
+  // MEMANGGIL ENDPOINT API PRODUK NEXT.JS (deklarasi sebelum useEffect agar tidak violate react-hooks/immutability)
+  const fetchProducts = useCallback(async () => {
+    try {
+      setProductsLoading(true);
+      const API_URL = getApiBaseUrl();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
+      const response = await fetch(`${API_URL}/api/product`, { signal: controller.signal });
+      clearTimeout(timeout);
+      const data = await response.json();
+
+      if (response.ok && Array.isArray(data)) {
+        const mappedProducts = data.map((item) => {
+          try {
+            const rawImage = item?.gambar;
+            const image = typeof rawImage === 'string' && rawImage.trim()
+              ? `data:image/jpeg;base64,${rawImage.trim()}`
+              : null;
+            const jenis = item?.jenis || item?.nama || '';
+            const slug = jenis.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            return {
+              id: item?.id_produk,
+              brand: item?.nama || 'Brand',
+              name: jenis || 'Product',
+              price: parseFloat(item?.harga || 0) * 1000000,
+              stock: item?.stok ?? 0,
+              image,
+              slug,
+            };
+          } catch {
+            return null;
+          }
+        }).filter(Boolean);
+        setProducts(mappedProducts);
+      } else {
+        setProductsError('Gagal memuat produk dari server');
+      }
+    } catch (err) {
+      console.error('Error fetching products:', err);
+      setProductsError('Gagal terhubung ke server API produk');
+    } finally {
+      setProductsLoading(false);
+    }
   }, []);
 
-  const fetchIklan = async () => {
+  const fetchIklan = useCallback(async () => {
     try {
       setIklanLoading(true);
       const API_URL = getApiBaseUrl();
@@ -388,9 +423,7 @@ export default function Home() {
       const response = await fetch(`${API_URL}/api/iklan`, { signal: controller.signal });
       clearTimeout(timeout);
       const data = await response.json();
-
       if (response.ok && Array.isArray(data)) {
-        // Kolom DB: id_iklan, gambar (sudah base64 data-URI dari API), title, text
         const mapped = data.map((item, idx) => ({
           id: item?.id_iklan ?? idx,
           title: item?.title ?? 'Promo',
@@ -399,14 +432,14 @@ export default function Home() {
         }));
         setIklan(mapped);
       }
-    } catch (e) {
+    } catch (_e) {
       // Gagal ambil iklan -> blok promo tidak dirender, aplikasi tetap jalan
     } finally {
       setIklanLoading(false);
     }
-  };
+  }, []);
 
-  const fetchArticles = async () => {
+  const fetchArticles = useCallback(async () => {
     try {
       setArticlesLoading(true);
       // Host API otomatis mengikuti host dev server (WiFi / hotspot) — lihat lib/api.js
@@ -455,15 +488,29 @@ export default function Home() {
         });
         setArticles(mappedArticles);
       } else {
-              setArticlesError(tLoadArticleFail);
-            }
-          } catch (err) {
-            console.error('Error fetching articles:', err);
-            setArticlesError(tConnectFail);
-          } finally {
-            setArticlesLoading(false);
-          }
-        };
+        setArticlesError(tLoadArticleFail);
+      }
+    } catch (err) {
+      console.error('Error fetching articles:', err);
+      setArticlesError(tConnectFail);
+    } finally {
+      setArticlesLoading(false);
+    }
+  }, [tClickDetail, tConnectFail, tLoadArticleFail]);
+
+  // Trigger fetch setelah interaksi awal selesai (render cepat, baru load data)
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => { fetchProducts(); });
+    return () => task.cancel();
+  }, [fetchProducts]);
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => { fetchIklan(); });
+    return () => task.cancel();
+  }, [fetchIklan]);
+  useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => { fetchArticles(); });
+    return () => task.cancel();
+  }, [fetchArticles]);
 
   // Pop up iklan promo otomatis (sekali, 5 detik setelah halaman terbuka)
   useEffect(() => {
@@ -476,6 +523,8 @@ export default function Home() {
     }, 5000);
     return () => clearTimeout(t);
   }, []);
+
+  const wishlistIds = new Set(useWishlist().map((w) => w.id));
 
   const carouselData = [
     { id: 1, image: require('../../../assets/thumbnail/xiaomi1.jpg') },
@@ -819,24 +868,76 @@ export default function Home() {
         </View>
 
         <View className="px-4 flex-row flex-wrap justify-between gap-y-4 mb-4 z-0">
-          {[1, 2, 3, 4].map((i) => (
-            <TouchableOpacity
-              key={i}
-              style={{ width: '48%' }}
-              className="bg-surface dark:bg-[#0F172A] border border-outlineVariant dark:border-[#334155] rounded-[8px] overflow-hidden elevation-1 shadow-sm"
-              onPress={() => router.push('/detail')}
-            >
-              <Image
-                source={{ uri: 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg' }}
-                className="w-full h-[160px] object-cover"
-              />
-              <View className="p-3">
-                              <Text className="text-onSurface dark:text-[#E3F2FD] font-bold text-sm mb-1" numberOfLines={2}>{tProductName} {i}</Text>
-                              <Text className="text-primary dark:text-[#90CAF9] font-bold text-sm">Rp 1.500.000</Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+                          {productsLoading ? (
+                            [1, 2, 3, 4].map((i) => (
+                              <View key={`skeleton-${i}`} className="bg-surface dark:bg-[#0F172A] border border-outlineVariant dark:border-[#334155] rounded-[12px] overflow-hidden w-[48%]">
+                                <View className="w-full h-[180px] bg-white dark:bg-[#1E293B] items-center justify-center">
+                                  <Skeleton className="w-full h-full rounded-none" />
+                                </View>
+                                <View className="p-3 gap-2">
+                                  <Skeleton className="w-3/4 h-4" />
+                                  <Skeleton className="w-1/2 h-4" />
+                                  <Skeleton className="w-1/3 h-3" />
+                                  <Skeleton className="w-1/2 h-3" />
+                                </View>
+                              </View>
+                            ))
+                          ) : products.length > 0 ? (
+                            products.map((product) => {
+                              const wishId = `product-${product.id}`;
+                              const isWish = wishlistIds.has(wishId);
+                              return (
+                              <View
+                                key={product.id}
+                                className="bg-surface dark:bg-[#0F172A] border border-outlineVariant dark:border-[#334155] rounded-[12px] overflow-hidden elevation-1 shadow-sm w-[48%]"
+                              >
+                                {/* GAMBAR DI ATAS — contain agar tidak terpotong, bg putih */}
+                                <View className="w-full h-[180px] bg-white dark:bg-[#1E293B] relative overflow-hidden">
+                                  <TouchableOpacity activeOpacity={0.85} onPress={() => router.push(`/detail?slug=${product.slug}`)} style={{ width: '100%', height: '100%' }}>
+                                    <ImageWithFallback
+                                      uri={product.image}
+                                      style={{ width: '100%', height: '100%' }}
+                                      contentFit="contain"
+                                      className="bg-white"
+                                    />
+                                  </TouchableOpacity>
+                                  {/* WISHLIST OVERLAY DI ATAS GAMBAR */}
+                                  <TouchableOpacity
+                                    onPress={() => {
+                                      const item = { id: wishId, brand: product.brand, name: product.name, price: `Rp ${product.price.toLocaleString('id-ID')}`, image: product.image };
+                                      if (isWish) removeFromWishlist(wishId); else addToWishlist(item);
+                                    }}
+                                    activeOpacity={0.8}
+                                    className={`absolute top-2 right-2 w-8 h-8 rounded-full items-center justify-center ${isWish ? 'bg-primary' : 'bg-white/90 border border-outlineVariant'}`}
+                                  >
+                                    <MaterialIcons name={isWish ? 'favorite' : 'favorite-border'} size={16} color={isWish ? '#FFFFFF' : '#0D47A1'} />
+                                  </TouchableOpacity>
+                                </View>
+                                <TouchableOpacity activeOpacity={0.85} onPress={() => router.push(`/detail?slug=${product.slug}`)} className="p-3 gap-1.5">
+                                  <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] font-medium">
+                                    {product.brand}
+                                  </Text>
+                                  <Text className="text-onSurface dark:text-[#E3F2FD] font-bold text-sm" numberOfLines={2}>
+                                    {product.name}
+                                  </Text>
+                                  <Text className="text-primary dark:text-[#90CAF9] font-bold text-sm">
+                                    Rp {product.price.toLocaleString('id-ID')}
+                                  </Text>
+                                  <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9]">
+                                    Stok: {product.stock} unit
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                              );
+                            })
+                          ) : (
+                    <View className="w-full px-4 py-8 items-center">
+                      <Text className="text-onSurfaceVariant dark:text-[#90CAF9] text-center">
+                        {productsError || 'Tidak ada produk tersedia'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
         {/* ARTIKEL ACCORDION SLIDER (AMBIL DATA DARI ENDPOINT DB) */}
                 <View className="mb-10 z-0">
