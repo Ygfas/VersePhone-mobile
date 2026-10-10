@@ -41,7 +41,9 @@ export function getApiBaseUrl() {
   }
 
   // Fallback: build production / tunnel tanpa IPv4 -> pakai konfigurasi eksplisit
+  // URL3 = IP terbaru, URL2/URL = IP lama (backward compat)
   const fallback =
+    process.env.EXPO_PUBLIC_API_URL3 ??
     process.env.EXPO_PUBLIC_API_URL2 ??
     process.env.EXPO_PUBLIC_API_URL ??
     'http://localhost:3000';

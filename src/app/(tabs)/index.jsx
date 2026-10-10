@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { View, ScrollView, Image, Text, TouchableOpacity, Modal, Pressable, FlatList, useWindowDimensions, Animated, InteractionManager } from 'react-native';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -320,8 +320,8 @@ export default function Home() {
   const pillStickyThreshold = screenHeight * 0.75 - (insets.top + 60);
   const [showNotif, setShowNotif] = useState(false);
   const [showSearchHistory, setShowSearchHistory] = useState(false);
-  const [popupData, setPopupData] = useState(null);
-    const [selectedVideo, setSelectedVideo] = useState(null);
+  const [productTab, setProductTab] = useState('Semua');
+  const [selectedVideo, setSelectedVideo] = useState(null);
 
     // Translated strings
     const tSearch = useTranslatedText('Cari produk...');
@@ -333,11 +333,10 @@ export default function Home() {
     const tArticle = useTranslatedText('Artikel');
     // eslint-disable-next-line no-unused-vars
     const tReadMore = useTranslatedText('Baca selengkapnya');
-    const tPopupTitle = useTranslatedText('Promo Spesial Minggu Ini');
-    const tPopupBody = useTranslatedText('Gratis ongkir se-Indonesia + cashback hingga 5% untuk semua smartphone. Berlaku sampai akhir bulan — jangan sampai kehabisan!');
+
     // eslint-disable-next-line no-unused-vars
     const tProductName = useTranslatedText('Nama Produk');
-    const tClose = useTranslatedText('Tutup');
+
     // eslint-disable-next-line no-unused-vars
     const tDetailInfo = useTranslatedText('Detail informasi akan ditampilkan di sini.');
     const tSearchHistory = useTranslatedText('Pencarian sebelumnya');
@@ -512,17 +511,7 @@ export default function Home() {
     return () => task.cancel();
   }, [fetchArticles]);
 
-  // Pop up iklan promo otomatis (sekali, 5 detik setelah halaman terbuka)
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setPopupData({
-        image: 'https://i.pinimg.com/736x/25/7a/e3/257ae37b125853599f57cf8f0052653c.jpg',
-        text: 'Promo Spesial Minggu Ini',
-        body: 'Gratis ongkir se-Indonesia + cashback hingga 5% untuk semua smartphone. Berlaku sampai akhir bulan — jangan sampai kehabisan!',
-      });
-    }, 5000);
-    return () => clearTimeout(t);
-  }, []);
+
 
   const wishlistIds = new Set(useWishlist().map((w) => w.id));
 
@@ -546,6 +535,17 @@ export default function Home() {
     { id: 7, name: 'poco', logo: require('../../../assets/brand/poco.png') },
     { id: 8, name: 'Asus', logo: require('../../../assets/brand/tecno.jpg') },
   ];
+
+  // --- TAB PRODUK (geser horizontal, gaya riwayat) ---
+  const PRODUCT_TABS = ['Semua', 'Terbaru', 'Terlaris', 'Promo'];
+  const filteredProducts = useMemo(() => {
+    if (productTab === 'Semua') return products;
+    if (products.length === 0) return [];
+    if (productTab === 'Terbaru') return [...products].slice(-8).reverse();
+    if (productTab === 'Terlaris') return [...products].sort((a, b) => (b.stock ?? 0) - (a.stock ?? 0)).slice(0, 8);
+    if (productTab === 'Promo') return [...products].sort((a, b) => (a.price ?? 0) - (b.price ?? 0)).slice(0, 8);
+    return products;
+  }, [products, productTab]);
 
   return (
     <View className="flex-1 bg-surface dark:bg-[#0F172A] relative">
@@ -861,13 +861,33 @@ export default function Home() {
           </ScrollView>
         </View>
 
-        <View className="px-4 items-end mb-4 z-0">
-          <TouchableOpacity className="w-12 h-12 rounded-full bg-surface dark:bg-[#0F172A] border border-outlineVariant dark:border-[#334155] items-center justify-center">
-            <MaterialIcons name="filter-list" size={20} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
-          </TouchableOpacity>
+        {/* TAB PRODUK — geser kanan-kiri (seperti Riwayat) */}
+        <View className="border-b border-outlineVariant dark:border-[#334155] z-0">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 12, gap: 4 }}
+          >
+            {PRODUCT_TABS.map((tab) => {
+              const active = productTab === tab;
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  onPress={() => setProductTab(tab)}
+                  className="items-center justify-center relative px-4 h-[44px]"
+                  activeOpacity={0.8}
+                >
+                  <Text className={`text-sm font-medium ${active ? 'text-primary dark:text-[#90CAF9]' : 'text-onSurfaceVariant dark:text-[#90CAF9]'}`}>
+                    {tab}
+                  </Text>
+                  {active && <View className="absolute bottom-0 w-10 h-[3px] bg-primary rounded-t-full" />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         </View>
 
-        <View className="px-4 flex-row flex-wrap justify-between gap-y-4 mb-4 z-0">
+        <View className="px-4 flex-row flex-wrap justify-between gap-y-4 mt-4 mb-4 z-0">
                           {productsLoading ? (
                             [1, 2, 3, 4].map((i) => (
                               <View key={`skeleton-${i}`} className="bg-surface dark:bg-[#0F172A] border border-outlineVariant dark:border-[#334155] rounded-[12px] overflow-hidden w-[48%]">
@@ -882,8 +902,8 @@ export default function Home() {
                                 </View>
                               </View>
                             ))
-                          ) : products.length > 0 ? (
-                            products.map((product) => {
+                          ) : filteredProducts.length > 0 ? (
+                            filteredProducts.map((product) => {
                               const wishId = `product-${product.id}`;
                               const isWish = wishlistIds.has(wishId);
                               return (
@@ -963,35 +983,7 @@ export default function Home() {
         />
       )}
 
-      {/* POPUP MODAL PROMO/ARTICLE */}
-            <Modal visible={!!popupData} transparent animationType="fade">
-              <Pressable
-                className="flex-1 bg-black/60 items-center justify-center p-4"
-                onPress={() => setPopupData(null)}
-              >
-                <Pressable onPress={() => { }}>
-                  <View className="bg-surface dark:bg-[#0F172A] rounded-[20px] overflow-hidden w-full max-w-[400px]">
-                    {popupData && (
-                      <ImageWithFallback uri={popupData?.image} style={{ width: '100%', height: 220 }} />
-                    )}
-                    <ScrollView style={{ maxHeight: 280 }} contentContainerStyle={{ padding: 20 }}>
-                      <Text className="text-xl font-bold text-onSurface dark:text-[#E3F2FD] mb-3">{tPopupTitle}</Text>
-                      <Text className="text-sm text-onSurfaceVariant dark:text-[#90CAF9] leading-6">
-                        {tPopupBody}
-                      </Text>
-                    </ScrollView>
-                    <View className="px-5 pb-5">
-                      <TouchableOpacity
-                        className="bg-primary rounded-full py-3 items-center"
-                        onPress={() => setPopupData(null)}
-                      >
-                        <Text className="text-white font-bold text-sm">{tClose}</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                </Pressable>
-              </Pressable>
-            </Modal>
+
     </View>
   );
 }
