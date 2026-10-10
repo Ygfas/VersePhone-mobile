@@ -6,6 +6,7 @@ import { createURL } from 'expo-linking';
 import * as Clipboard from 'expo-clipboard';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWishlist, addToWishlist, removeFromWishlist } from '../store/wishlist';
 import { useThemeMode } from '../store/theme-store';
@@ -160,14 +161,16 @@ export default function Detail() {
     const saved = wishlist.some((i) => i.id === WISHLIST_ID);
 
     const toggleWishlist = () => {
-        const item = {
-          id: WISHLIST_ID,
-          brand: productBrand,
-          name: productName,
-          ram: productVariant,
-          price: productPrice,
-          image: productImage,
-        };
+                const item = {
+                  id: WISHLIST_ID,
+                  slug: slug,
+                  brand: productBrand,
+                  name: productName,
+                  ram: productVariant,
+                  price: productPrice,
+                  image: productImage,
+                  stock: productStock,
+                };
 
         if (saved) {
           removeFromWishlist(WISHLIST_ID);
@@ -295,24 +298,15 @@ export default function Detail() {
                   >
                     {/* GAMBAR DI ATAS — contain + bg putih agar tidak terpotong */}
                     <View className="w-full h-[300px] bg-white dark:bg-[#1E293B] relative overflow-hidden items-center justify-center">
-                      <ImageWithFallback
-                        uri={productImage}
-                        style={{ width: '100%', height: '100%' }}
-                        contentFit="contain"
-                        className="bg-white"
-                      />
-                      {/* WISHLIST OVERLAY DI ATAS GAMBAR */}
-                      <View className="absolute top-3 right-3">
-                        <IconButton
-                          icon={saved ? 'bookmark' : 'bookmark-outline'}
-                          mode={saved ? 'filled' : 'standard'}
-                          size="s"
-                          onPress={toggleWishlist}
-                        />
-                      </View>
-                    </View>
+                                          <ImageWithFallback
+                                            uri={productImage}
+                                            style={{ width: '100%', height: '100%' }}
+                                            contentFit="contain"
+                                            className="bg-white"
+                                          />
+                                        </View>
 
-                    {/* KONTEN TEKS DI BAWAH GAMBAR */}
+                                        {/* KONTEN TEKS DI BAWAH GAMBAR */}
                     <View className="p-4 gap-1">
                         <Text className="text-xs text-outline dark:text-[#E3F2FD] font-semibold tracking-wider uppercase">
                                         {productBrand}
@@ -424,25 +418,33 @@ export default function Detail() {
                 </View>
       </ScrollView>
 
-      {/* BOTTOM BAR — Buy + Keranjang (tidak terhubung) */}
-      <View
-        className="absolute left-0 right-0 bottom-0 bg-white dark:bg-[#1E293B] border-t border-outlineVariant dark:border-[#334155] flex-row items-center gap-3 px-4"
-        style={{ paddingBottom: insets.bottom + 10, paddingTop: 10 }}
-      >
-        <TouchableOpacity
-          activeOpacity={0.7}
-          className="flex-1 py-3.5 rounded-full bg-white dark:bg-[#1E293B] border border-primary items-center justify-center flex-row gap-2"
-        >
-          <MaterialIcons name="shopping-cart" size={18} color="#2196F3" />
-          <Text className="text-primary font-bold text-sm">Keranjang</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          className="flex-1 py-3.5 rounded-full bg-primary items-center justify-center"
-        >
-          <Text className="text-white font-bold text-sm">{tBuy}</Text>
-        </TouchableOpacity>
-      </View>
+      {/* BOTTOM BAR — Wishlist + Keranjang + Beli */}
+            <View
+              className="absolute left-0 right-0 bottom-0 bg-white dark:bg-[#1E293B] border-t border-outlineVariant dark:border-[#334155] flex-row items-center gap-2 px-4"
+              style={{ paddingBottom: insets.bottom + 10, paddingTop: 10 }}
+            >
+              {/* Wishlist (Hati) */}
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={toggleWishlist}
+                className="w-12 h-12 rounded-full bg-white dark:bg-[#1E293B] border border-primary items-center justify-center"
+              >
+                <Ionicons name={saved ? 'heart' : 'heart-outline'} size={22} color="#2196F3" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                className="flex-1 py-3.5 rounded-full bg-white dark:bg-[#1E293B] border border-primary items-center justify-center flex-row gap-2"
+              >
+                <MaterialIcons name="shopping-cart" size={18} color="#2196F3" />
+                <Text className="text-primary font-bold text-sm">Keranjang</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.85}
+                className="flex-1 py-3.5 rounded-full bg-primary items-center justify-center"
+              >
+                <Text className="text-white font-bold text-sm">{tBuy}</Text>
+              </TouchableOpacity>
+            </View>
 
       {/* ===== BOTTOM SHEET SHARE ===== */}
       <Modal
