@@ -25,6 +25,10 @@ export default function RootLayout() {
                 animation: 'slide_from_right',
                 cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
               }} />
+              <Stack.Screen name="search" options={{ 
+                animation: 'slide_from_right',
+                cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
+              }} />
               <Stack.Screen name="liked-trigger" options={{ animation: 'fade' }} />
               <Stack.Screen name="login" options={{ 
                 animation: 'slide_from_right',

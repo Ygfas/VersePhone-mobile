@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { View, ScrollView, Image, Text, TouchableOpacity, Modal, Pressable, FlatList, useWindowDimensions, Animated, InteractionManager } from 'react-native';
+import { View, ScrollView, Image, Text, TouchableOpacity, Modal, Pressable, FlatList, useWindowDimensions, Animated, InteractionManager, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { setCurrentPromo } from '../../store/promo-view';
 import { useThemeMode } from '../../store/theme-store';
 import { useTranslatedText } from '../../store/language-store';
 import { useWishlist, addToWishlist, removeFromWishlist } from '../../store/wishlist';
+import { useSearchHistory, addSearchHistory, removeSearchHistory, clearSearchHistory } from '../../store/search-history';
 
 // --- SUB-COMPONENT CARD VIDEO (Grid Thumbnail - Auto-play & Muted) ---
 function VideoGridCard({ videoSrc, onPress }) {
@@ -320,8 +321,18 @@ export default function Home() {
   const pillStickyThreshold = screenHeight * 0.75 - (insets.top + 60);
   const [showNotif, setShowNotif] = useState(false);
   const [showSearchHistory, setShowSearchHistory] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchHistory = useSearchHistory();
   const [productTab, setProductTab] = useState('Semua');
   const [selectedVideo, setSelectedVideo] = useState(null);
+
+  const handleSearch = (q) => {
+    const query = (q !== undefined ? q : searchQuery).trim();
+    if (!query) return;
+    addSearchHistory(query);
+    setShowSearchHistory(false);
+    router.push(`/search?q=${encodeURIComponent(query)}`);
+  };
 
     // Translated strings
     const tSearch = useTranslatedText('Cari produk...');
@@ -573,22 +584,32 @@ export default function Home() {
           },
         ]}
       >
-        <View className="flex-1 flex-row items-center bg-surfaceContainerHigh dark:bg-[#1E293B] rounded-full h-[44px] px-4">
-                  <MaterialIcons name="search" size={20} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
-                  <TouchableOpacity
-                    className="flex-1 ml-2"
-                    onPress={() => {
-                      setShowSearchHistory(!showSearchHistory);
-                      setShowNotif(false);
-                    }}
-                  >
-                    <Text className="text-onSurfaceVariant dark:text-[#90CAF9] text-sm">{tSearch}</Text>
-                  </TouchableOpacity>
-          {showSearchHistory && (
-            <TouchableOpacity onPress={() => setShowSearchHistory(false)}>
+        <View className="flex-1 flex-row items-center bg-surfaceContainerHigh dark:bg-[#1E293B] rounded-full h-[44px] px-3">
+          <TouchableOpacity onPress={() => handleSearch(searchQuery)} activeOpacity={0.7}>
+            <MaterialIcons name="search" size={20} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
+          </TouchableOpacity>
+          <TextInput
+            className="flex-1 ml-2 text-sm text-onSurface dark:text-[#E3F2FD] py-0"
+            placeholder={tSearch}
+            placeholderTextColor={isDarkMode ? "#90CAF9" : "#80756C"}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onFocus={() => {
+              setShowSearchHistory(true);
+              setShowNotif(false);
+            }}
+            onSubmitEditing={() => handleSearch(searchQuery)}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 ? (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <MaterialIcons name="close" size={18} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
             </TouchableOpacity>
-          )}
+          ) : showSearchHistory ? (
+            <TouchableOpacity onPress={() => setShowSearchHistory(false)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <MaterialIcons name="close" size={18} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
+            </TouchableOpacity>
+          ) : null}
         </View>
 
         <TouchableOpacity
@@ -651,22 +672,55 @@ export default function Home() {
 
       {/* SEARCH HISTORY OVERLAY */}
       {showSearchHistory && (
-              <View className="absolute left-4 right-4 bg-surfaceContainerHigh dark:bg-[#1E293B] rounded-[16px] shadow-md elevation-4 z-50 overflow-hidden"
-                style={{ top: insets.top + 64 }}
-              >
-                {[1, 2, 3].map((i) => (
-                  <View key={i} className="flex-row items-center p-4 border-b border-outlineVariant dark:border-[#334155]">
-                    <View className="w-9 h-9 rounded-full bg-surfaceContainer dark:bg-[#1E293B] items-center justify-center mr-3">
-                      <MaterialIcons name="schedule" size={20} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
-                    </View>
-                    <Text className="flex-1 text-sm text-onSurface dark:text-[#E3F2FD]">{tSearchHistory} {i}</Text>
-                    <TouchableOpacity>
-                      <MaterialIcons name="close" size={18} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
-                    </TouchableOpacity>
+        <>
+          <Pressable
+            className="absolute inset-0 z-40"
+            onPress={() => setShowSearchHistory(false)}
+          />
+          <View
+            className="absolute left-4 right-4 bg-surfaceContainerHigh dark:bg-[#1E293B] rounded-[16px] shadow-md elevation-4 z-50 overflow-hidden"
+            style={{ top: insets.top + 64 }}
+          >
+            {searchHistory.length > 0 ? (
+              searchHistory.map((item) => (
+                <TouchableOpacity
+                  key={item}
+                  className="flex-row items-center p-4 border-b border-outlineVariant dark:border-[#334155]"
+                  onPress={() => {
+                    setSearchQuery(item);
+                    handleSearch(item);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View className="w-9 h-9 rounded-full bg-surfaceContainer dark:bg-[#1E293B] items-center justify-center mr-3">
+                    <MaterialIcons name="schedule" size={20} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
                   </View>
-                ))}
+                  <Text className="flex-1 text-sm text-onSurface dark:text-[#E3F2FD]">{item}</Text>
+                  <TouchableOpacity
+                    onPress={() => removeSearchHistory(item)}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <MaterialIcons name="close" size={18} color={isDarkMode ? "#90CAF9" : "#4F453D"} />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View className="p-4 items-center">
+                <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9]">Belum ada riwayat pencarian</Text>
               </View>
             )}
+            {searchHistory.length > 0 && (
+              <TouchableOpacity
+                className="py-2.5 items-center bg-surfaceContainer dark:bg-[#1E293B]"
+                onPress={() => clearSearchHistory()}
+                activeOpacity={0.7}
+              >
+                <Text className="text-xs text-primary dark:text-[#90CAF9] font-medium">Hapus Semua Riwayat</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </>
+      )}
 
       {/* NOTIFICATION FULL-SCREEN MODAL */}
       <Modal visible={showNotif} transparent animationType="fade">
