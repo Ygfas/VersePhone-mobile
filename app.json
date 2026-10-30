@@ -36,6 +36,9 @@
       ],
       "expo-video"
     ],
+    "extra": {
+      "Google_client_auth": "56321620017-urs0kl8hr0lghilh2h6sie3o51s3pijv.apps.googleusercontent.com"
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
