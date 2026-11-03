@@ -16,7 +16,13 @@ export default function SignUp() {
   const [isChecked, setIsChecked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState("");
-  const [touched, setTouched] = useState(false);
+  const [touched, setTouched] = useState({
+    name: false,
+    phone: false,
+    email: false,
+    password: false,
+    terms: false,
+  });
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -57,39 +63,52 @@ export default function SignUp() {
   }, []);
 
   const validatePassword = (value) => {
-    // Diperlonggar: minimal 6 karakter, bebas huruf besar/kecil/angka agar user tidak bingung
-    if (value.length < 6) {
-      return "Password minimal 6 karakter.";
-    }
+    if (!value) return "Password wajib diisi.";
+    if (value.length < 8) return "Password minimal 8 karakter.";
+    if (!/\d/.test(value)) return "Password harus mengandung angka (0-9).";
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) return "Password harus mengandung simbol (contoh: @, #, !, dll).";
     return "";
   };
 
   const getPasswordStrength = (value) => {
     if (!value) return { score: 0, label: "", color: "transparent" };
-    let score = value.length >= 6 ? 4 : 2;
-    return { score, label: value.length >= 6 ? "Kuat" : "Lemah", color: value.length >= 6 ? "#2E7D32" : "#B3261E" };
+    let score = 0;
+    if (value.length >= 8) score += 1;
+    if (/\d/.test(value)) score += 1;
+    if (/[A-Z]/.test(value)) score += 1;
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(value)) score += 1;
+
+    const labels = ["Sangat Lemah", "Lemah", "Sedang", "Kuat", "Sangat Kuat"];
+    const colors = ["#B3261E", "#FF9800", "#FBC02D", "#2E7D32", "#1B5E20"];
+    return { score, label: labels[score], color: colors[score] };
   };
 
-  const strength = getPasswordStrength(password);
-  const passwordError = validatePassword(password);
-  const isPasswordValid = passwordError === "" && password.length > 0;
-
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const validatePhone = (phone) => /^(\+62|62|0)8[1-9][0-9]{7,9}$/.test(phone.replace(/\s/g, ""));
+  const validatePhone = (phone) => /^(\+62|62|0)8[0-9]{8,12}$/.test(phone.replace(/\s/g, ""));
 
-  const canSubmit = isPasswordValid && isChecked && name.trim() && phone.trim() && email.trim() && validateEmail(email) && validatePhone(phone);
+  const nameError = !name.trim() ? "Nama atau Username wajib diisi." : "";
+  const emailError = !email.trim() ? "Email wajib diisi." : !validateEmail(email) ? "Format email tidak valid." : "";
+  const phoneError = !phone.trim() ? "Nomor seluler wajib diisi." : !validatePhone(phone) ? "Format nomor telepon tidak valid." : "";
+  const passwordError = validatePassword(password);
+  const termsError = !isChecked ? "Anda harus menyetujui syarat & ketentuan." : "";
+
+  const strength = getPasswordStrength(password);
+  const isPasswordValid = passwordError === "";
+
+  const canSubmit = isPasswordValid && isChecked && !nameError && !emailError && !phoneError;
 
   const handleSignUp = async () => {
+    setTouched({
+      name: true,
+      phone: true,
+      email: true,
+      password: true,
+      terms: true,
+    });
+
     if (!canSubmit) {
-      Alert.alert(tSignUpFailed, tFillAllFields);
-      return;
-    }
-    if (!validateEmail(email)) {
-      Alert.alert(tSignUpFailed, tInvalidEmail);
-      return;
-    }
-    if (!validatePhone(phone)) {
-      Alert.alert(tSignUpFailed, tInvalidPhone);
+      const firstError = nameError || phoneError || emailError || passwordError || termsError;
+      Alert.alert(tSignUpFailed, firstError || tFillAllFields);
       return;
     }
 
@@ -99,7 +118,7 @@ export default function SignUp() {
 
     if (result.success) {
       Alert.alert("Berhasil", `Akun ${result.username} berhasil dibuat! Silakan login.`, [
-        { text: "OK", onPress: () => router.push("/login") },
+        { text: "OK", onPress: () => router.replace("/login") },
       ]);
     } else {
       let errorMsg = result.error;
@@ -113,7 +132,8 @@ export default function SignUp() {
     try {
       const result = await loginWithGoogle();
       if (result.success) {
-        if (result.role === "admin") {
+        const role = (result.role || result.user?.role || "").toLowerCase();
+        if (role === "admin") {
           router.replace("/overview");
         } else {
           router.replace("/");
@@ -143,48 +163,54 @@ export default function SignUp() {
           <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
             <MaterialIcons name="person" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
             <TextInput
-              className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
-              placeholder={tEnterNameOrUsername}
-              placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-            />
-          </View>
-        </View>
+                className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
+                placeholder={tEnterNameOrUsername}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
+                value={name}
+                onChangeText={setName}
+                onBlur={() => setTouched({ ...touched, name: true })}
+                autoCapitalize="words"
+              />
+            </View>
+            {touched.name && nameError && <Text className="text-xs text-error dark:text-red-300 m-2">{nameError}</Text>}
+            </View>
 
-        {/* INPUT NOMOR SELULER */}
-        <View className="w-full mb-6">
-          <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tPhoneNumber}</Text>
-          <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
-            <MaterialIcons name="numbers" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
-            <TextInput
-              className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
-              placeholder={tEnterPhoneNumber}
-              placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
-              keyboardType="phone-pad"
-              value={phone}
-              onChangeText={setPhone}
-            />
-          </View>
-        </View>
+            {/* INPUT NOMOR SELULER */}
+            <View className="w-full mb-6">
+            <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tPhoneNumber}</Text>
+            <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
+              <MaterialIcons name="numbers" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
+              <TextInput
+                className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
+                placeholder={tEnterPhoneNumber}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
+                keyboardType="phone-pad"
+                value={phone}
+                onChangeText={setPhone}
+                onBlur={() => setTouched({ ...touched, phone: true })}
+              />
+            </View>
+            {touched.phone && phoneError && <Text className="text-xs text-error dark:text-red-300 m-2">{phoneError}</Text>}
+            </View>
 
-        {/* INPUT EMAIL */}
-        <View className="w-full mb-6">
-          <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tEmail}</Text>
-          <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
-            <MaterialIcons name="mail" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
-            <TextInput
-              className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
-              placeholder={tEnterEmail}
-              placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-            />
-          </View>
-        </View>
+            {/* INPUT EMAIL */}
+            <View className="w-full mb-6">
+            <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tEmail}</Text>
+            <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
+              <MaterialIcons name="mail" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
+              <TextInput
+                className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
+                placeholder={tEnterEmail}
+                placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+                onBlur={() => setTouched({ ...touched, email: true })}
+              />
+            </View>
+            {touched.email && emailError && <Text className="text-xs text-error dark:text-red-300 m-2">{emailError}</Text>}
+            </View>
 
         {/* INPUT PASSWORD */}
         <View className="w-full mb-4">
@@ -200,13 +226,13 @@ export default function SignUp() {
               placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
               value={password}
               onChangeText={setPassword}
-              onBlur={() => setTouched(true)}
+              onBlur={() => setTouched({ ...touched, password: true })}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: 4 }}>
               <MaterialIcons name={showPassword ? "visibility" : "visibility-off"} size={22} color={isDark ? "#90CAF9" : "#4F453D"} />
             </TouchableOpacity>
           </View>
-          {touched && !!passwordError && (
+          {touched.password && !!passwordError && (
             <Text className="text-xs text-error dark:text-red-300 m-2">{passwordError}</Text>
           )}
 
@@ -231,7 +257,7 @@ export default function SignUp() {
             </View>
           )}
 
-          <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] m-2">Ketentuan: Minimal 6 karakter.</Text>
+          <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] m-2">Ketentuan: Minimal 8 karakter, mengandung angka dan simbol.</Text>
         </View>
 
         {/* CHECKBOX I AGREE */}
@@ -244,6 +270,7 @@ export default function SignUp() {
           </TouchableOpacity>
           <Text className="text-base text-onSurface dark:text-[#E3F2FD]">{tIAgree}</Text>
         </View>
+        {touched.terms && termsError && <Text className="text-xs text-error dark:text-red-300 -mt-4 mb-4">{termsError}</Text>}
 
         {/* TOMBOL SIGN UP */}
         <Button
@@ -256,24 +283,7 @@ export default function SignUp() {
           onPress={handleSignUp}
         />
 
-        <Text className="text-base text-onSurface dark:text-[#E3F2FD] mb-2">{tOr}</Text>
-
-        {/* TOMBOL GOOGLE */}
-        <TouchableOpacity
-          className="w-full flex-row items-center justify-center border border-outline dark:border-[#334155] rounded-full h-[48px] bg-surface dark:bg-[#0F172A]"
-          onPress={handleGoogleSignIn}
-          activeOpacity={0.8}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator size="small" color="#2196F3" />
-          ) : (
-            <>
-              <FontAwesome name="google" size={18} color="#EA4335" style={{ marginRight: 8 }} />
-              <Text className="text-onSurface dark:text-[#E3F2FD] font-medium text-base">{tGoogle}</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        
       </View>
     </View>
   );

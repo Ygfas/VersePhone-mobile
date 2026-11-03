@@ -68,8 +68,8 @@ export default function Login() {
     setIsSubmitting(false);
 
     if (result.success) {
-      // Redirect berdasarkan role
-      if (result.role === "admin") {
+      const role = (result.role || result.user?.role || "").toLowerCase();
+      if (role === "admin") {
         router.replace("/overview");
       } else {
         router.replace("/");
@@ -84,7 +84,8 @@ export default function Login() {
       try {
         const result = await loginWithGoogle();
         if (result.success) {
-          if (result.role === "admin") {
+          const role = (result.role || result.user?.role || "").toLowerCase();
+          if (role === "admin") {
             router.replace("/overview");
           } else {
             router.replace("/");
