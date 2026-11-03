@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { TopAppBar } from '../../components/TopAppBar';
 import { useThemeMode, setDarkMode } from '../../store/theme-store';
 import { useLanguage, setLanguage, useTranslatedText } from '../../store/language-store';
+import { useAuth, logout, checkSession } from '../../store/auth';
 
 // --- ROW MENU SETTINGS ---
 function SettingsRow({ icon, title, value, onPress, right, isLast = false }) {
@@ -55,11 +56,16 @@ export default function More() {
   const router = useRouter();
   const isDarkMode = useThemeMode();
   const lang = useLanguage();
+  const { user } = useAuth();
   const [isNotifOn, setIsNotifOn] = useState(true);
   const tHello = useTranslatedText('Halo, Pengunjung!');
   const tSub = useTranslatedText('Masuk untuk akses pesanan & fitur lengkap');
   const tLogin = useTranslatedText('Masuk');
   const tRegister = useTranslatedText('Daftar');
+
+  useEffect(() => {
+    checkSession();
+  }, []);
 
   return (
     <View className="flex-1 bg-surface dark:bg-[#0F172A]">
@@ -70,36 +76,66 @@ export default function More() {
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
       >
         {/* BANNER PROFIL / LOGIN */}
-        <View className="bg-primary rounded-[20px] p-5 shadow-sm elevation-2 mb-4">
-          <View className="flex-row items-center">
-            <View className="w-14 h-14 rounded-full bg-white dark:bg-[#1E293B] items-center justify-center mr-4">
-              <MaterialIcons name="person" size={30} color="#2196F3" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-white text-lg font-bold">{tHello}</Text>
-              <Text className="text-white/85 text-xs mt-1">
-                {tSub}
-              </Text>
+        {user ? (
+          <View className="bg-primary rounded-[20px] p-5 shadow-sm elevation-2 mb-4">
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center flex-1 mr-2">
+                <View className="w-14 h-14 rounded-full bg-white dark:bg-[#1E293B] items-center justify-center mr-4">
+                  <MaterialIcons name="person" size={30} color="#2196F3" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-white text-lg font-bold" numberOfLines={1}>
+                    {user.username || user.name || 'User'}
+                  </Text>
+                  <Text className="text-white/85 text-xs mt-1" numberOfLines={1}>
+                    {user.email || 'email@example.com'}
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={async () => {
+                  await logout();
+                }}
+                activeOpacity={0.8}
+                className="bg-white/20 border border-white/40 px-3 py-2 rounded-full flex-row items-center"
+              >
+                <MaterialIcons name="logout" size={16} color="#FFFFFF" style={{ marginRight: 4 }} />
+                <Text className="text-white font-bold text-xs">Keluar</Text>
+              </TouchableOpacity>
             </View>
           </View>
+        ) : (
+          <View className="bg-primary rounded-[20px] p-5 shadow-sm elevation-2 mb-4">
+            <View className="flex-row items-center">
+              <View className="w-14 h-14 rounded-full bg-white dark:bg-[#1E293B] items-center justify-center mr-4">
+                <MaterialIcons name="person" size={30} color="#2196F3" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-white text-lg font-bold">{tHello}</Text>
+                <Text className="text-white/85 text-xs mt-1">
+                  {tSub}
+                </Text>
+              </View>
+            </View>
 
-          <View className="flex-row gap-2 mt-5">
-            <TouchableOpacity
-              onPress={() => router.push('/login')}
-              activeOpacity={0.8}
-              className="flex-1 bg-white dark:bg-[#1E293B] rounded-full h-11 items-center justify-center"
-            >
-              <Text className="text-primary dark:text-[#90CAF9] font-bold text-sm">{tLogin}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => router.push('/signup')}
-              activeOpacity={0.8}
-              className="flex-1 border border-white/70 rounded-full h-11 items-center justify-center"
-            >
-              <Text className="text-white font-bold text-sm">{tRegister}</Text>
-            </TouchableOpacity>
+            <View className="flex-row gap-2 mt-5">
+              <TouchableOpacity
+                onPress={() => router.push('/login')}
+                activeOpacity={0.8}
+                className="flex-1 bg-white dark:bg-[#1E293B] rounded-full h-11 items-center justify-center"
+              >
+                <Text className="text-primary dark:text-[#90CAF9] font-bold text-sm">{tLogin}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/signup')}
+                activeOpacity={0.8}
+                className="flex-1 border border-white/70 rounded-full h-11 items-center justify-center"
+              >
+                <Text className="text-white font-bold text-sm">{tRegister}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        )}
 
         {/* PESANAN */}
         <SettingsSection title="Pesanan">
