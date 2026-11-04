@@ -323,10 +323,48 @@ export default function Home() {
   const [showSearchHistory, setShowSearchHistory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchHistory = useSearchHistory();
-  const [productTab, setProductTab] = useState('Semua');
-  const [selectedVideo, setSelectedVideo] = useState(null);
+    const [productTab, setProductTab] = useState('Semua');
+    const [selectedVideo, setSelectedVideo] = useState(null);
 
-  const handleSearch = (q) => {
+    // Snackbar & Success Popup states (mirip detail screen)
+    const [snackbar, setSnackbar] = useState(null);
+    const [successPopup, setSuccessPopup] = useState(null);
+    const snackAnim = useRef(new Animated.Value(0)).current;
+    const popupAnim = useRef(new Animated.Value(0)).current;
+    const snackTimer = useRef(null);
+    const popupTimer = useRef(null);
+
+    const tRemovedWishlist = useTranslatedText('Dihapus dari wishlist');
+    const tAddedWishlist = useTranslatedText('Ditambahkan ke wishlist');
+    const tUndo = useTranslatedText('Batal');
+
+    const hideSnackbar = useCallback(() => {
+      if (snackTimer.current) clearTimeout(snackTimer.current);
+      Animated.timing(snackAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() =>
+        setSnackbar(null)
+      );
+    }, [snackAnim]);
+
+    const showSnackbar = useCallback((message, undoAction) => {
+      if (snackTimer.current) clearTimeout(snackTimer.current);
+      snackAnim.setValue(0);
+      setSnackbar({ message, undoAction });
+      Animated.timing(snackAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+      snackTimer.current = setTimeout(hideSnackbar, 3000);
+    }, [snackAnim, hideSnackbar]);
+
+    const showSuccessPopup = useCallback((message) => {
+      if (popupTimer.current) clearTimeout(popupTimer.current);
+      popupAnim.setValue(0);
+      setSuccessPopup({ message });
+      Animated.sequence([
+        Animated.timing(popupAnim, { toValue: 1, duration: 250, useNativeDriver: true }),
+        Animated.delay(1000),
+        Animated.timing(popupAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+      ]).start(() => setSuccessPopup(null));
+    }, [popupAnim]);
+
+    const handleSearch = (q) => {
     const query = (q !== undefined ? q : searchQuery).trim();
     if (!query) return;
     addSearchHistory(query);
@@ -543,8 +581,11 @@ export default function Home() {
     { id: 4, name: 'Vivo', logo: require('../../../assets/brand/vivo.jpg') },
     { id: 5, name: 'Oppo', logo: require('../../../assets/brand/oppo.jpg') },
     { id: 6, name: 'Realme', logo: require('../../../assets/brand/realme.jpg') },
-    { id: 7, name: 'poco', logo: require('../../../assets/brand/poco.png') },
-    { id: 8, name: 'Asus', logo: require('../../../assets/brand/tecno.jpg') },
+    { id: 7, name: 'Poco', logo: require('../../../assets/brand/poco.png') },
+    { id: 8, name: 'Tecno', logo: require('../../../assets/brand/tecno.jpg') },
+    { id: 9, name: 'Infinix', logo: require('../../../assets/brand/infinix.jpg') },
+    { id: 10, name: 'Iqoo', logo: require('../../../assets/brand/iqoo.jpg') },
+
   ];
 
   // --- TAB PRODUK (geser horizontal, gaya riwayat) ---
@@ -620,6 +661,14 @@ export default function Home() {
           }}
         >
           <MaterialIcons name="notifications" size={24} color={isDarkMode ? "#E3F2FD" : "#0D47A1"} />
+        
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.push('/cart')}
+          activeOpacity={0.8}
+          className="w-11 h-11 rounded-full bg-surfaceContainerHigh dark:bg-[#1E293B] items-center justify-center"
+        >
+          <MaterialIcons name="shopping-cart" size={24} color={isDarkMode ? "#E3F2FD" : "#0D47A1"} />
         </TouchableOpacity>
       </Animated.View>
 
@@ -897,6 +946,7 @@ export default function Home() {
             {brandList.map((brand) => (
               <TouchableOpacity
                 key={brand.id}
+                onPress={() => router.push(`/search?brand=${encodeURIComponent(brand.name)}`)}
                 activeOpacity={0.8}
                 className="items-center"
               >
@@ -976,16 +1026,23 @@ export default function Home() {
                                     />
                                   </TouchableOpacity>
                                   {/* WISHLIST OVERLAY DI ATAS GAMBAR */}
-                                  <TouchableOpacity
-                                    onPress={() => {
-                                      const item = { id: wishId, brand: product.brand, name: product.name, price: `Rp ${product.price.toLocaleString('id-ID')}`, image: product.image };
-                                      if (isWish) removeFromWishlist(wishId); else addToWishlist(item);
-                                    }}
-                                    activeOpacity={0.8}
-                                    className={`absolute top-2 right-2 w-8 h-8 rounded-full items-center justify-center ${isWish ? 'bg-primary' : 'bg-white/90 border border-outlineVariant'}`}
-                                  >
-                                    <MaterialIcons name={isWish ? 'favorite' : 'favorite-border'} size={16} color={isWish ? '#FFFFFF' : '#0D47A1'} />
-                                  </TouchableOpacity>
+                                                                    <TouchableOpacity
+                                                                      onPress={() => {
+                                                                        const item = { id: wishId, brand: product.brand, name: product.name, price: `Rp ${product.price.toLocaleString('id-ID')}`, image: product.image };
+                                                                        if (isWish) {
+                                                                          removeFromWishlist(wishId);
+                                                                          showSnackbar(tRemovedWishlist, () => addToWishlist(item));
+                                                                        } else {
+                                                                          addToWishlist(item);
+                                                                          showSnackbar(tAddedWishlist, () => removeFromWishlist(wishId));
+                                                                          showSuccessPopup(tAddedWishlist);
+                                                                        }
+                                                                      }}
+                                                                      activeOpacity={0.8}
+                                                                      className={`absolute top-2 right-2 w-8 h-8 rounded-full items-center justify-center ${isWish ? 'bg-primary' : 'bg-white/90 border border-outlineVariant'}`}
+                                                                    >
+                                                                      <MaterialIcons name={isWish ? 'favorite' : 'favorite-border'} size={16} color={isWish ? '#FFFFFF' : '#0D47A1'} />
+                                                                    </TouchableOpacity>
                                 </View>
                                 <TouchableOpacity activeOpacity={0.85} onPress={() => router.push(`/detail?slug=${product.slug}`)} className="p-3 gap-1.5">
                                   <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] font-medium">
@@ -1037,6 +1094,65 @@ export default function Home() {
         />
       )}
 
+      {/* SNACKBAR (UNDO WISHLIST) */}
+      {snackbar && (
+        <Animated.View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            left: 16,
+            right: 16,
+            bottom: insets.bottom + 16,
+            opacity: snackAnim,
+            transform: [
+              {
+                translateY: snackAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [24, 0],
+                }),
+              },
+            ],
+          }}
+        >
+          <View className="bg-[#1F1B18] rounded-[8px] px-4 py-3 flex-row items-center shadow-md elevation-4">
+            <Text className="text-white text-lg flex-1 mr-3">{snackbar.message}</Text>
+            <TouchableOpacity
+              onPress={() => {
+                snackbar.undoAction?.();
+                hideSnackbar();
+              }}
+              activeOpacity={0.8}
+            >
+              <Text className="text-[#90CAF9] dark:text-[#E3F2FD] font-bold text-sm">{tUndo}</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
+
+      {/* SUCCESS POPUP (CENTER) - hanya home screen */}
+      {successPopup && (
+        <Animated.View
+          pointerEvents="box-none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            justifyContent: 'center',
+            alignItems: 'center',
+            opacity: popupAnim,
+            zIndex: 100,
+          }}
+        >
+          <View className="bg-white dark:bg-[#1E293B] rounded-[16px] px-6 py-4 items-center shadow-xl elevation-8 flex-row gap-3">
+            <View className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 items-center justify-center">
+              <MaterialIcons name="check" size={24} color="#2196F3" />
+            </View>
+            <Text className="text-lg font-bold text-onSurface dark:text-[#E3F2FD]">{successPopup.message}</Text>
+          </View>
+        </Animated.View>
+      )}
 
     </View>
   );

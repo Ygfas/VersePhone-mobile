@@ -35,9 +35,10 @@ export default function SearchScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const isDarkMode = useThemeMode();
-  const { q } = useLocalSearchParams();
+  const { q, brand } = useLocalSearchParams();
 
-  const [query, setQuery] = useState(typeof q === 'string' ? q : '');
+  const [query, setQuery] = useState(typeof q === 'string' ? q : (typeof brand === 'string' ? brand : ''));
+  const [selectedBrand, setSelectedBrand] = useState(typeof brand === 'string' ? brand : null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,8 +48,12 @@ export default function SearchScreen() {
   useEffect(() => {
     if (typeof q === 'string') {
       setQuery(q);
+      setSelectedBrand(null);
+    } else if (typeof brand === 'string') {
+      setSelectedBrand(brand);
+      setQuery('');
     }
-  }, [q]);
+  }, [q, brand]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -99,6 +104,10 @@ export default function SearchScreen() {
   }, [fetchProducts]);
 
   const filteredProducts = useMemo(() => {
+    if (selectedBrand) {
+      const bLower = selectedBrand.toLowerCase().trim();
+      return products.filter((p) => p.brand?.toLowerCase().includes(bLower));
+    }
     if (!query.trim()) return products;
     const qLower = query.toLowerCase().trim();
     return products.filter((p) => {
@@ -106,7 +115,7 @@ export default function SearchScreen() {
       const matchName = p.name?.toLowerCase().includes(qLower);
       return matchBrand || matchName;
     });
-  }, [products, query]);
+  }, [products, query, selectedBrand]);
 
   const handleSearchSubmit = () => {
     const trimmed = query.trim();
@@ -155,9 +164,11 @@ export default function SearchScreen() {
         {/* QUERY INFO */}
         <View className="px-4 py-3 flex-row justify-between items-center">
           <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9]">
-            {query.trim()
-              ? `Hasil pencarian untuk "${query}"`
-              : 'Semua Produk'}
+            {selectedBrand
+              ? `Produk ${selectedBrand}`
+              : query.trim()
+                ? `Hasil pencarian untuk "${query}"`
+                : 'Semua Produk'}
           </Text>
           {!loading && (
             <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9]">

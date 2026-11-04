@@ -7,21 +7,9 @@ import { useWishlist, removeFromWishlist } from '../../store/wishlist';
 import { useTranslatedText } from '../../store/language-store';
 import { useRouter } from 'expo-router';
 
-// Kartu wishlist meniru kartu produk di halaman detail:
-// gambar kiri (1/3), konten kanan (2/3) berisi nama, RAM, harga, stok.
+// Kartu wishlist grid 2 kolom dengan gaya Neumorphism & card bisa diklik ke detail
 function WishlistCard({ item }) {
   const router = useRouter();
-  const hasStock = item.stock !== undefined && item.stock !== null;
-  const stockText = hasStock
-    ? item.stock > 0
-      ? `Stok: ${item.stock} unit`
-      : 'Stok habis'
-    : null;
-  const stockColor = hasStock
-    ? item.stock > 0
-      ? 'text-emerald-600 dark:text-emerald-300'
-      : 'text-red-500'
-    : 'text-onSurfaceVariant dark:text-[#90CAF9]';
 
   const handleNavigate = () => {
     router.push(`/detail?slug=${item.slug || item.id}`);
@@ -32,55 +20,52 @@ function WishlistCard({ item }) {
   };
 
   return (
-    <View className="flex-row bg-white dark:bg-[#1E293B] border border-blue-500 dark:border-[#334155] rounded-[10px] overflow-hidden shadow-sm elevation-1">
-      <View className="w-[33.33%] aspect-square relative bg-surfaceContainerHighest dark:bg-[#334155]">
+    <TouchableOpacity
+      onPress={handleNavigate}
+      activeOpacity={0.9}
+      className="w-[100%] bg-white dark:bg-[#1E293B] border border-gray-100 dark:border-slate-800 rounded-[16px] overflow-hidden mb-4 shadow-md elevation-2"
+    >
+      {/* Container gambar dengan background putih */}
+      <View className="w-full aspect-square relative bg-white dark:bg-[#1E293B] items-center justify-center p-3">
         <Image
           source={{ uri: item.image }}
-          className="w-full h-full object-contain"
+          className="w-full h-full"
           resizeMode="contain"
         />
+        {/* Tombol like warna biru di atas kiri */}
+        <TouchableOpacity
+          onPress={handleRemove}
+          activeOpacity={0.8}
+          className="absolute top-2 left-2 w-8 h-8 rounded-full bg-white/90 dark:bg-slate-800/90 shadow-sm items-center justify-center border border-blue-100 dark:border-slate-700"
+        >
+          <Ionicons name="heart" size={16} color="#2196F3" />
+        </TouchableOpacity>
       </View>
 
-      <View className="flex-1 p-3 justify-between min-w-0">
-        <View>
-          {item.brand && (
-            <Text className="text-[10px] text-outline dark:text-[#E3F2FD] font-semibold tracking-wider uppercase">
-              {item.brand}
-            </Text>
-          )}
-          <Text className="text-sm text-onSurface dark:text-[#E3F2FD] font-bold mt-0.5" numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] font-medium mt-1">
-            {item.ram || '-'}
-          </Text>
-          {stockText && (
-            <Text className={`text-xs mt-1 ${stockColor} font-medium`}>
-              {stockText}
-            </Text>
-          )}
-        </View>
+      <View className="p-3 bg-white dark:bg-[#1E293B]">
+        <Text className="text-[10px] text-blue-500 dark:text-[#90CAF9] font-bold uppercase tracking-wider">
+          {item.brand || 'Verse'}
+        </Text>
+        <Text className="text-xs text-onSurface dark:text-[#E3F2FD] font-bold mt-1" numberOfLines={2}>
+          {item.name}
+        </Text>
+        <Text className="text-sm font-extrabold text-primary dark:text-[#90CAF9] mt-2">
+          {item.price || 'Rp 0'}
+        </Text>
 
-        <View className="flex-row items-center justify-between mt-2">
-          <TouchableOpacity
-            onPress={handleNavigate}
-            activeOpacity={0.9}
-            className="flex-1 pr-2"
-          >
-            <Text className="text-sm font-bold text-primary dark:text-[#90CAF9] flex-shrink-0">{item.price || 'Rp 0'}</Text>
-          </TouchableOpacity>
-
-          {/* Hati terisi: tersimpan, tekan untuk hapus */}
-          <TouchableOpacity
-            onPress={handleRemove}
-            activeOpacity={0.8}
-            className="w-9 h-9 rounded-full bg-primary items-center justify-center ml-2 flex-shrink-0"
-          >
-            <Ionicons name="heart" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+        {/* Tombol Keranjang */}
+        <TouchableOpacity
+          onPress={handleNavigate}
+          activeOpacity={0.8}
+          className="mt-3 w-full py-2.5 rounded-[12px] bg-blue-50 dark:bg-slate-700 flex-row items-center justify-center gap-1.5 border border-blue-100 dark:border-slate-600"
+        >
+          <Ionicons name="cart" size={16} color="#2196F3" />
+          <Text className="text-[11px] font-bold text-blue-600 dark:text-blue-300">
+            Tambah ke Keranjang
+          </Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -94,10 +79,9 @@ export default function Wishlist() {
       <TopAppBar title="Wishlist" />
 
       {items.length === 0 ? (
-        /* EMPTY STATE - wishlist kosong sampai bookmark di detail ditekan */
         <View className="flex-1 items-center justify-center px-8" style={{ paddingBottom: 100 }}>
-          <View className="w-24 h-24 rounded-full bg-surfaceContainerHigh dark:bg-[#1E293B] items-center justify-center">
-            <MaterialIcons name="favorite-border" size={44} color="#90CAF9" />
+          <View className="w-24 h-24 rounded-full bg-surfaceContainerHigh dark:bg-[#1E293B] items-center justify-center shadow-inner">
+            <MaterialIcons name="favorite-border" size={44} color="#2196F3" />
           </View>
           <Text className="text-lg font-bold text-onSurface dark:text-[#E3F2FD] mt-5">{tTitle}</Text>
           <Text className="text-sm text-onSurfaceVariant dark:text-[#90CAF9] text-center mt-2 leading-5">
@@ -105,10 +89,17 @@ export default function Wishlist() {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
-          {items.map((item) => (
-            <WishlistCard key={item.id} item={item} />
-          ))}
+        <ScrollView contentContainerStyle={{ padding: 12 }} showsVerticalScrollIndicator={false}>
+          <View className="flex-row flex-wrap justify-between">
+            {items.map((item) => (
+              <View
+                key={item.id}
+                className="w-[48.5%] px-1"
+              >
+                <WishlistCard item={item} />
+              </View>
+            ))}
+          </View>
         </ScrollView>
       )}
     </View>
