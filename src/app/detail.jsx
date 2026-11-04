@@ -155,8 +155,8 @@ export default function Detail() {
       { label: 'Sistem Operasi', value: product?.specs?.['Sistem Operasi'] || 'Android 14, One UI 6.1' },
     ];
 
-    // Wishlist (tersimpan = bookmark bold, bisa dihapus)
-    const WISHLIST_ID = product?.id ? `detail-product-${product.id}` : 'detail-product-ultra';
+    // Wishlist (tersimpan = bookmark bold, bisa dihapus) — ID sama dengan home screen agar sinkron
+        const WISHLIST_ID = product?.id ? `product-${product.id}` : 'product-ultra';
     const wishlist = useWishlist();
     const saved = wishlist.some((i) => i.id === WISHLIST_ID);
 
@@ -595,7 +595,7 @@ export default function Detail() {
           }}
         >
           <View className="bg-[#1F1B18] rounded-[8px] px-4 py-3 flex-row items-center shadow-md elevation-4">
-            <Text className="text-white text-sm flex-1 mr-3">{snackbar.message}</Text>
+            <Text className="text-white text-lg flex-1 mr-3">{snackbar.message}</Text>
             <TouchableOpacity
               onPress={() => {
                 snackbar.undoAction?.();

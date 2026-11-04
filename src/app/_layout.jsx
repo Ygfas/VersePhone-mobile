@@ -46,6 +46,10 @@ export default function RootLayout() {
                 animation: 'slide_from_right',
                 cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
               }} />
+              <Stack.Screen name="cart" options={{ 
+                animation: 'slide_from_right',
+                cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
+              }} />
             </Stack>
     </View>
   );
