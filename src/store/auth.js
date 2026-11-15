@@ -4,6 +4,7 @@ import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import Constants from "expo-constants";
 import { setWishlistUser, clearWishlistUser } from "./wishlist";
+import { setCartUser, clearCartUser } from "./cart";
 
 // Supaya auth session bisa jalan di Expo Go
 WebBrowser.maybeCompleteAuthSession();
@@ -54,6 +55,7 @@ async function apiRequest(endpoint, options = {}) {
 export function setAuth(user, error = null) {
   authState = { user, isLoading: false, error };
   setWishlistUser(user);
+  setCartUser(user);
   emit();
 }
 
@@ -65,6 +67,7 @@ export function setLoading(isLoading) {
 export function clearAuth() {
   authState = { user: null, isLoading: false, error: null };
   clearWishlistUser();
+  clearCartUser();
   emit();
 }
 

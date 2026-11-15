@@ -9,6 +9,7 @@ import FontAwesome5 from '@expo/vector-icons/FontAwesome5';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useWishlist, addToWishlist, removeFromWishlist } from '../store/wishlist';
+import { addToCart } from '../store/cart';
 import { useThemeMode } from '../store/theme-store';
 import { useTranslatedText } from '../store/language-store';
 import { IconButton } from '../components/Button';
@@ -25,6 +26,8 @@ export default function Detail() {
   const [selectedRam, setSelectedRam] = useState(null);
   const [selectedRom, setSelectedRom] = useState(null);
   const [showShare, setShowShare] = useState(false);
+  const [showCartSheet, setShowCartSheet] = useState(false);
+  const [cartQty, setCartQty] = useState(1);
   const [copied, setCopied] = useState(false);
 
   // State for product detail from API
@@ -52,6 +55,9 @@ export default function Detail() {
 
         if (response.ok && data) {
           setProduct(data);
+          if (data.colors && data.colors.length > 0) {
+            setSelectedColor(data.colors[0]);
+          }
         } else {
           setError(data?.error || 'Produk tidak ditemukan');
         }
@@ -69,6 +75,8 @@ export default function Detail() {
   // Animasi bottom sheet (smooth, custom ease)
   const sheetAnim = useRef(new Animated.Value(0)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
+  const cartSheetAnim = useRef(new Animated.Value(0)).current;
+  const cartBackdropAnim = useRef(new Animated.Value(0)).current;
   const SHEET_H = 620;
 
   useEffect(() => {
@@ -81,11 +89,48 @@ export default function Detail() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showShare]);
 
+  useEffect(() => {
+    if (showCartSheet) {
+      setCartQty(1);
+      Animated.parallel([
+        Animated.timing(cartSheetAnim, { toValue: 1, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(cartBackdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+      ]).start();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCartSheet]);
+
   const closeShare = () => {
     Animated.parallel([
       Animated.timing(sheetAnim, { toValue: 0, duration: 220, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
       Animated.timing(backdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => setShowShare(false));
+  };
+
+  const closeCartSheet = () => {
+    Animated.parallel([
+      Animated.timing(cartSheetAnim, { toValue: 0, duration: 220, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(cartBackdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => setShowCartSheet(false));
+  };
+
+  const handleAddToCart = () => {
+    const item = {
+      id: product?.id || `product-${slug}`,
+      slug: slug,
+      brand: productBrand,
+      name: productName,
+      price: product?.price || 21999000, // Simpan angka murni (number)
+      image: productImage,
+      color: selectedColor,
+      ram: selectedRam || ramOptions[0],
+      rom: selectedRom || romOptions[0],
+      qty: cartQty,
+      stock: productStock,
+    };
+    addToCart(item);
+    closeCartSheet();
+    showSnackbar('Berhasil ditambahkan ke keranjang');
   };
 
   // Snackbar dengan aksi undo
@@ -127,7 +172,7 @@ export default function Detail() {
     const productPrice = product?.price ? `Rp ${product.price.toLocaleString('id-ID')}` : 'Rp 21.999.000';
     const productStock = product?.stock ?? product?.stok ?? 0;
     const productImage = product?.image || 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg';
-    const productColors = product?.colors?.length > 0 ? product.colors.map((c, i) => ({ name: c, hex: ['#3B82F6', '#1E293B', '#94A3B8'][i] || '#3B82F6' })) : [
+    const productColors = product?.colors?.length > 0 ? product.colors.map((c, i) => ({ name: c, hex: ['#3B82F6', '#1E293B', '#94A3B8', '#EF4444', '#10B981'][i] || '#3B82F6' })) : [
       { name: 'Blue', hex: '#3B82F6' },
       { name: 'Black', hex: '#1E293B' },
       { name: 'Silver', hex: '#94A3B8' },
@@ -210,7 +255,6 @@ export default function Detail() {
       case 'email':
         return `mailto:?subject=${encodeURIComponent(`${productName} - ${productPrice}`)}&body=${encodeURIComponent(`${getShareText()} ${getShareUrl()}`)}`;
       default:
-        // Instagram, TikTok, Snapchat dsb. tanpa web-intent -> fallback share sheet native
         return null;
     }
   };
@@ -227,7 +271,6 @@ export default function Detail() {
       }
       closeShare();
     } catch {
-      // Aplikasi target tidak terpasang -> share sheet native
       await fallback();
       closeShare();
     }
@@ -433,6 +476,7 @@ export default function Detail() {
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.7}
+                onPress={() => setShowCartSheet(true)}
                 className="flex-1 py-3.5 rounded-full bg-white dark:bg-[#1E293B] border border-primary items-center justify-center flex-row gap-2"
               >
                 <MaterialIcons name="shopping-cart" size={18} color="#2196F3" />
@@ -440,6 +484,7 @@ export default function Detail() {
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.85}
+                onPress={() => router.push('/cart')}
                 className="flex-1 py-3.5 rounded-full bg-primary items-center justify-center"
               >
                 <Text className="text-white font-bold text-sm">{tBuy}</Text>
@@ -574,7 +619,118 @@ export default function Detail() {
           </Animated.View>
         </Pressable>
       </Modal>
-    {/* ===== SNACKBAR (UNDO WISHLIST) ===== */}
+
+      {/* ===== BOTTOM SHEET CART ===== */}
+      <Modal
+        visible={showCartSheet}
+        transparent
+        animationType="none"
+        onRequestClose={closeCartSheet}
+      >
+        <Pressable className="flex-1 justify-end" onPress={closeCartSheet}>
+          <Animated.View
+            className="absolute inset-0 bg-black/50"
+            style={{ opacity: cartBackdropAnim }}
+          />
+
+          <Animated.View
+            className="bg-surface dark:bg-[#0F172A] rounded-t-[24px] px-6 pt-3"
+            style={{
+              paddingBottom: insets.bottom + 16,
+              transform: [
+                {
+                  translateY: cartSheetAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [SHEET_H, 0],
+                  }),
+                },
+              ],
+            }}
+          >
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <View className="w-10 h-1 rounded-full bg-slate-300 dark:bg-[#1E293B] self-center mb-4" />
+
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-lg font-bold text-onSurface dark:text-[#E3F2FD]">Tambah ke Keranjang</Text>
+                <TouchableOpacity
+                  onPress={closeCartSheet}
+                  className="w-9 h-9 rounded-full bg-surfaceContainerHigh dark:bg-[#1E293B] items-center justify-center"
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons name="close" size={20} color={isDark ? "#E3F2FD" : "#1F1B18"} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Preview Produk di Cart Sheet */}
+              <View className="flex-row items-center bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[16px] p-3 mb-4">
+                <Image
+                  source={{ uri: productImage }}
+                  className="w-16 h-16 rounded-[10px] bg-surfaceContainerHighest dark:bg-[#334155]"
+                  resizeMode="contain"
+                />
+                <View className="flex-1 ml-3">
+                  <Text className="text-xs text-outline dark:text-[#90CAF9] font-semibold uppercase">{productBrand}</Text>
+                  <Text className="text-sm font-bold text-onSurface dark:text-[#E3F2FD] mt-0.5" numberOfLines={1}>
+                    {productName}
+                  </Text>
+                  <Text className="text-sm font-bold text-primary dark:text-[#90CAF9] mt-1">
+                    {productPrice}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Warna Terpilih */}
+              <View className="mb-4">
+                <Text className="text-xs text-outline dark:text-[#E3F2FD] font-medium mb-1.5">Warna: <Text className="font-bold">{selectedColor}</Text></Text>
+                <View className="flex-row gap-2">
+                  {productColors.map((c) => (
+                    <TouchableOpacity
+                      key={c.name}
+                      onPress={() => setSelectedColor(c.name)}
+                      className={`px-3 py-1.5 rounded-full border flex-row items-center gap-1.5 ${selectedColor === c.name ? 'bg-primary border-primary' : 'bg-surfaceContainerLow dark:bg-[#1E293B] border-outlineVariant dark:border-[#334155]'}`}
+                    >
+                      <View style={{ backgroundColor: c.hex }} className="w-3.5 h-3.5 rounded-full" />
+                      <Text className={`text-xs font-bold ${selectedColor === c.name ? 'text-white' : 'text-onSurface dark:text-[#E3F2FD]'}`}>{c.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Jumlah (Qty) */}
+              <View className="flex-row items-center justify-between mb-6 bg-surfaceContainerLow dark:bg-[#1E293B] p-3 rounded-[16px]">
+                <Text className="text-sm font-bold text-onSurface dark:text-[#E3F2FD]">Jumlah</Text>
+                <View className="flex-row items-center gap-3">
+                  <TouchableOpacity
+                    onPress={() => setCartQty(Math.max(1, cartQty - 1))}
+                    className="w-8 h-8 rounded-full bg-white dark:bg-[#0F172A] items-center justify-center shadow-sm"
+                  >
+                    <MaterialIcons name="remove" size={16} color={isDark ? '#E3F2FD' : '#1F1B18'} />
+                  </TouchableOpacity>
+                  <Text className="text-base font-bold text-onSurface dark:text-[#E3F2FD] w-6 text-center">{cartQty}</Text>
+                  <TouchableOpacity
+                    onPress={() => setCartQty(cartQty + 1)}
+                    className="w-8 h-8 rounded-full bg-white dark:bg-[#0F172A] items-center justify-center shadow-sm"
+                  >
+                    <MaterialIcons name="add" size={16} color={isDark ? '#E3F2FD' : '#1F1B18'} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Tombol Simpan ke Keranjang */}
+              <TouchableOpacity
+                onPress={handleAddToCart}
+                activeOpacity={0.85}
+                className="bg-primary rounded-full h-12 items-center justify-center flex-row gap-2 shadow-md"
+              >
+                <MaterialIcons name="shopping-cart" size={18} color="#FFFFFF" />
+                <Text className="text-white font-bold text-base">Simpan ke Keranjang</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
+
+    {/* ===== SNACKBAR ===== */}
       {snackbar && (
         <Animated.View
           pointerEvents="box-none"
@@ -595,16 +751,18 @@ export default function Detail() {
           }}
         >
           <View className="bg-[#1F1B18] rounded-[8px] px-4 py-3 flex-row items-center shadow-md elevation-4">
-            <Text className="text-white text-lg flex-1 mr-3">{snackbar.message}</Text>
-            <TouchableOpacity
-              onPress={() => {
-                snackbar.undoAction?.();
-                hideSnackbar();
-              }}
-              activeOpacity={0.8}
-            >
-              <Text className="text-[#90CAF9] dark:text-[#E3F2FD] font-bold text-sm">{tUndo}</Text>
-            </TouchableOpacity>
+            <Text className="text-white text-sm flex-1 mr-3">{snackbar.message}</Text>
+            {snackbar.undoAction && (
+              <TouchableOpacity
+                onPress={() => {
+                  snackbar.undoAction?.();
+                  hideSnackbar();
+                }}
+                activeOpacity={0.8}
+              >
+                <Text className="text-[#90CAF9] dark:text-[#E3F2FD] font-bold text-sm">{tUndo}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </Animated.View>
       )}
