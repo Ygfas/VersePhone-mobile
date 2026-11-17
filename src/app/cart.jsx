@@ -161,7 +161,7 @@ export default function CartScreen() {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => router.push('/payment')}
+              onPress={() => router.push('/checkout')}
               activeOpacity={0.85}
               className="bg-primary px-8 py-3.5 rounded-[16px] shadow-md flex-row items-center gap-2"
             >
