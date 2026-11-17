@@ -150,67 +150,77 @@ export default function SignUp() {
 
   return (
     <View className="flex-1 bg-surface dark:bg-[#0F172A]">
-      <TopAppBar title={tSignUp} leftIcon="arrow-back" onLeftPress={() => router.back()} />
+      <TopAppBar leftIcon="arrow-back" onLeftPress={() => router.back()} />
 
-      <TouchableOpacity className="absolute top-[28px] right-4" onPress={() => router.push("/login")}>
+      <TouchableOpacity className="absolute top-[48px] right-4" onPress={() => router.push("/login")}>
         <Text className="text-xl mt-7 text-primary dark:text-[#90CAF9] font-medium">{tLogin}</Text>
       </TouchableOpacity>
 
-      <View className="p-4 mt-8 flex-1 items-center">
+      {/* INFORMASI HALAMAN SIGN UP */}
+      <View className="px-6 mt-6">
+        <Text className="text-2xl font-bold text-black dark:text-[#E3F2FD]">
+          Buat Akun Baru
+        </Text>
+        <Text className="text-sm text-onSurfaceVariant dark:text-[#90CAF9] mt-1">
+          Lengkapi data diri Anda di bawah ini untuk mendaftar dan mulai menggunakan aplikasi.
+        </Text>
+      </View>
+
+      <View className="p-4 mt-4 flex-1 items-center">
         {/* INPUT NAME / USERNAME */}
         <View className="w-full mb-6">
           <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tNameOrUsername}</Text>
           <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
             <MaterialIcons name="person" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
             <TextInput
-                className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
-                placeholder={tEnterNameOrUsername}
-                placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
-                value={name}
-                onChangeText={setName}
-                onBlur={() => setTouched({ ...touched, name: true })}
-                autoCapitalize="words"
-              />
-            </View>
-            {touched.name && nameError && <Text className="text-xs text-error dark:text-red-300 m-2">{nameError}</Text>}
-            </View>
+              className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
+              placeholder={tEnterNameOrUsername}
+              placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
+              value={name}
+              onChangeText={setName}
+              onBlur={() => setTouched({ ...touched, name: true })}
+              autoCapitalize="words"
+            />
+          </View>
+          {touched.name && nameError && <Text className="text-xs text-error dark:text-red-300 m-2">{nameError}</Text>}
+        </View>
 
-            {/* INPUT NOMOR SELULER */}
-            <View className="w-full mb-6">
-            <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tPhoneNumber}</Text>
-            <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
-              <MaterialIcons name="numbers" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
-              <TextInput
-                className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
-                placeholder={tEnterPhoneNumber}
-                placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
-                keyboardType="phone-pad"
-                value={phone}
-                onChangeText={setPhone}
-                onBlur={() => setTouched({ ...touched, phone: true })}
-              />
-            </View>
-            {touched.phone && phoneError && <Text className="text-xs text-error dark:text-red-300 m-2">{phoneError}</Text>}
-            </View>
+        {/* INPUT NOMOR SELULER */}
+        <View className="w-full mb-6">
+          <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tPhoneNumber}</Text>
+          <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
+            <MaterialIcons name="phone" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
+            <TextInput
+              className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
+              placeholder={tEnterPhoneNumber}
+              placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
+              keyboardType="phone-pad"
+              value={phone}
+              onChangeText={setPhone}
+              onBlur={() => setTouched({ ...touched, phone: true })}
+            />
+          </View>
+          {touched.phone && phoneError && <Text className="text-xs text-error dark:text-red-300 m-2">{phoneError}</Text>}
+        </View>
 
-            {/* INPUT EMAIL */}
-            <View className="w-full mb-6">
-            <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tEmail}</Text>
-            <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
-              <MaterialIcons name="mail" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
-              <TextInput
-                className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
-                placeholder={tEnterEmail}
-                placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-                onBlur={() => setTouched({ ...touched, email: true })}
-              />
-            </View>
-            {touched.email && emailError && <Text className="text-xs text-error dark:text-red-300 m-2">{emailError}</Text>}
-            </View>
+        {/* INPUT EMAIL */}
+        <View className="w-full mb-6">
+          <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tEmail}</Text>
+          <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
+            <MaterialIcons name="mail" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
+            <TextInput
+              className="flex-1 text-base text-onSurface dark:text-[#E3F2FD]"
+              placeholder={tEnterEmail}
+              placeholderTextColor={isDark ? "#9CA3AF" : "#79747E"}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={setEmail}
+              onBlur={() => setTouched({ ...touched, email: true })}
+            />
+          </View>
+          {touched.email && emailError && <Text className="text-xs text-error dark:text-red-300 m-2">{emailError}</Text>}
+        </View>
 
         {/* INPUT PASSWORD */}
         <View className="w-full mb-4">
@@ -283,7 +293,7 @@ export default function SignUp() {
           onPress={handleSignUp}
         />
 
-        
+
       </View>
     </View>
   );

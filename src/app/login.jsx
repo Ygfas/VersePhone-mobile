@@ -111,13 +111,23 @@ export default function Login() {
 
   return (
     <View className="flex-1 bg-surface dark:bg-[#0F172A]">
-      <TopAppBar title={tLogin} leftIcon="arrow-back" onLeftPress={() => router.back()} />
+      <TopAppBar leftIcon="arrow-back" onLeftPress={() => router.back()} />
 
-      <TouchableOpacity className="absolute top-[28px] right-4" onPress={() => router.push("/signup")}>
+      <TouchableOpacity className="absolute top-[48px] right-4" onPress={() => router.push("/signup")}>
         <Text className="text-xl mt-7 text-primary dark:text-[#90CAF9] font-medium">{tSignUp}</Text>
       </TouchableOpacity>
 
-      <View className="p-4 mt-8 flex-1 items-center">
+      {/* INFORMASI HALAMAN LOGIN */}
+      <View className="px-6 mt-6">
+        <Text className="text-2xl font-bold text-black dark:text-[#E3F2FD]">
+          Masuk ke Akun Anda
+        </Text>
+        <Text className="text-sm text-onSurfaceVariant dark:text-[#90CAF9] mt-1">
+          Silakan login menggunakan akun yang sudah terdaftar untuk melanjutkan.
+        </Text>
+      </View>
+
+      <View className="p-4 mt-4 flex-1 items-center">
         {/* INPUT USERNAME */}
         <View className="w-full mb-6">
           <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tNameOrUsername}</Text>

@@ -27,7 +27,9 @@ export default function Detail() {
   const [selectedRom, setSelectedRom] = useState(null);
   const [showShare, setShowShare] = useState(false);
   const [showCartSheet, setShowCartSheet] = useState(false);
+  const [showBuySheet, setShowBuySheet] = useState(false);
   const [cartQty, setCartQty] = useState(1);
+  const [buyQty, setBuyQty] = useState(1);
   const [copied, setCopied] = useState(false);
 
   // State for product detail from API
@@ -77,6 +79,8 @@ export default function Detail() {
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const cartSheetAnim = useRef(new Animated.Value(0)).current;
   const cartBackdropAnim = useRef(new Animated.Value(0)).current;
+  const buySheetAnim = useRef(new Animated.Value(0)).current;
+  const buyBackdropAnim = useRef(new Animated.Value(0)).current;
   const SHEET_H = 620;
 
   useEffect(() => {
@@ -100,6 +104,17 @@ export default function Detail() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCartSheet]);
 
+  useEffect(() => {
+    if (showBuySheet) {
+      setBuyQty(1);
+      Animated.parallel([
+        Animated.timing(buySheetAnim, { toValue: 1, duration: 280, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(buyBackdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+      ]).start();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showBuySheet]);
+
   const closeShare = () => {
     Animated.parallel([
       Animated.timing(sheetAnim, { toValue: 0, duration: 220, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
@@ -112,6 +127,32 @@ export default function Detail() {
       Animated.timing(cartSheetAnim, { toValue: 0, duration: 220, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
       Animated.timing(cartBackdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => setShowCartSheet(false));
+  };
+  
+  const closeBuySheet = () => {
+    Animated.parallel([
+      Animated.timing(buySheetAnim, { toValue: 0, duration: 220, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(buyBackdropAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => setShowBuySheet(false));
+  };
+  
+  const handleDirectBuy = () => {
+    const numericPrice = typeof product?.price === 'number' ? product.price : 21999000;
+    closeBuySheet();
+    router.push({
+      pathname: '/checkout',
+      params: {
+        buyDirect: '1',
+        name: productName,
+        brand: productBrand,
+        price: String(numericPrice),
+        image: productImage,
+        color: selectedColor,
+        ram: selectedRam || ramOptions[0] || '',
+        rom: selectedRom || romOptions[0] || '',
+        qty: String(buyQty),
+      },
+    });
   };
 
   const handleAddToCart = () => {
@@ -484,7 +525,7 @@ export default function Detail() {
               </TouchableOpacity>
               <TouchableOpacity
                 activeOpacity={0.85}
-                onPress={() => router.push('/cart')}
+                onPress={() => setShowBuySheet(true)}
                 className="flex-1 py-3.5 rounded-full bg-primary items-center justify-center"
               >
                 <Text className="text-white font-bold text-sm">{tBuy}</Text>
@@ -724,6 +765,142 @@ export default function Detail() {
               >
                 <MaterialIcons name="shopping-cart" size={18} color="#FFFFFF" />
                 <Text className="text-white font-bold text-base">Simpan ke Keranjang</Text>
+              </TouchableOpacity>
+            </Pressable>
+          </Animated.View>
+        </Pressable>
+      </Modal>
+
+      {/* ===== BOTTOM SHEET BUY (DIRECT CHECKOUT) ===== */}
+      <Modal
+        visible={showBuySheet}
+        transparent
+        animationType="none"
+        onRequestClose={closeBuySheet}
+      >
+        <Pressable className="flex-1 justify-end" onPress={closeBuySheet}>
+          <Animated.View
+            className="absolute inset-0 bg-black/50"
+            style={{ opacity: buyBackdropAnim }}
+          />
+
+          <Animated.View
+            className="bg-surface dark:bg-[#0F172A] rounded-t-[24px] px-6 pt-3"
+            style={{
+              paddingBottom: insets.bottom + 16,
+              transform: [
+                {
+                  translateY: buySheetAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [SHEET_H, 0],
+                  }),
+                },
+              ],
+            }}
+          >
+            <Pressable onPress={(e) => e.stopPropagation()}>
+              <View className="w-10 h-1 rounded-full bg-slate-300 dark:bg-[#1E293B] self-center mb-4" />
+
+              <View className="flex-row items-center justify-between mb-4">
+                <Text className="text-lg font-bold text-onSurface dark:text-[#E3F2FD]">Beli Langsung</Text>
+                <TouchableOpacity
+                  onPress={closeBuySheet}
+                  className="w-9 h-9 rounded-full bg-surfaceContainerHigh dark:bg-[#1E293B] items-center justify-center"
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons name="close" size={20} color={isDark ? "#E3F2FD" : "#1F1B18"} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Preview Produk */}
+              <View className="flex-row items-center bg-surfaceContainerLow dark:bg-[#1E293B] rounded-[16px] p-3 mb-4">
+                <Image
+                  source={{ uri: productImage }}
+                  className="w-16 h-16 rounded-[10px] bg-surfaceContainerHighest dark:bg-[#334155]"
+                  resizeMode="contain"
+                />
+                <View className="flex-1 ml-3">
+                  <Text className="text-xs text-outline dark:text-[#90CAF9] font-semibold uppercase">{productBrand}</Text>
+                  <Text className="text-sm font-bold text-onSurface dark:text-[#E3F2FD] mt-0.5" numberOfLines={1}>
+                    {productName}
+                  </Text>
+                  <Text className="text-sm font-bold text-primary dark:text-[#90CAF9] mt-1">
+                    {productPrice}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Varian Warna */}
+              <View className="mb-4">
+                <Text className="text-xs text-outline dark:text-[#E3F2FD] font-medium mb-1.5">Warna: <Text className="font-bold">{selectedColor}</Text></Text>
+                <View className="flex-row gap-2">
+                  {productColors.map((c) => (
+                    <TouchableOpacity
+                      key={c.name}
+                      onPress={() => setSelectedColor(c.name)}
+                      className={`px-3 py-1.5 rounded-full border flex-row items-center gap-1.5 ${selectedColor === c.name ? 'bg-primary border-primary' : 'bg-surfaceContainerLow dark:bg-[#1E293B] border-outlineVariant dark:border-[#334155]'}`}
+                    >
+                      <View style={{ backgroundColor: c.hex }} className="w-3.5 h-3.5 rounded-full" />
+                      <Text className={`text-xs font-bold ${selectedColor === c.name ? 'text-white' : 'text-onSurface dark:text-[#E3F2FD]'}`}>{c.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Varian RAM / ROM (Jika Ada) */}
+              {(ramOptions.length > 0 || romOptions.length > 0) && (
+                <View className="mb-4">
+                  <Text className="text-xs text-outline dark:text-[#E3F2FD] font-medium mb-1.5">Varian: <Text className="font-bold">{[selectedRam || ramOptions[0], selectedRom || romOptions[0]].filter(Boolean).join(' / ')}</Text></Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                    {ramOptions.map((ram, i) => {
+                      const rom = romOptions[i] || romOptions[0];
+                      const label = [ram, rom].filter(Boolean).join(' / ');
+                      const isSelected = selectedRam === ram && selectedRom === rom;
+                      return (
+                        <TouchableOpacity
+                          key={label}
+                          onPress={() => {
+                            setSelectedRam(ram);
+                            setSelectedRom(rom);
+                          }}
+                          className={`px-4 py-2 rounded-[12px] border ${isSelected ? 'bg-primary border-primary' : 'bg-surfaceContainerLow dark:bg-[#1E293B] border-outlineVariant dark:border-[#334155]'}`}
+                        >
+                          <Text className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-onSurface dark:text-[#E3F2FD]'}`}>{label}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              )}
+
+              {/* Jumlah (Qty) */}
+              <View className="flex-row items-center justify-between mb-6 bg-surfaceContainerLow dark:bg-[#1E293B] p-3 rounded-[16px]">
+                <Text className="text-sm font-bold text-onSurface dark:text-[#E3F2FD]">Jumlah Pembelian</Text>
+                <View className="flex-row items-center gap-3">
+                  <TouchableOpacity
+                    onPress={() => setBuyQty(Math.max(1, buyQty - 1))}
+                    className="w-8 h-8 rounded-full bg-white dark:bg-[#0F172A] items-center justify-center shadow-sm"
+                  >
+                    <MaterialIcons name="remove" size={16} color={isDark ? '#E3F2FD' : '#1F1B18'} />
+                  </TouchableOpacity>
+                  <Text className="text-base font-bold text-onSurface dark:text-[#E3F2FD] w-6 text-center">{buyQty}</Text>
+                  <TouchableOpacity
+                    onPress={() => setBuyQty(buyQty + 1)}
+                    className="w-8 h-8 rounded-full bg-white dark:bg-[#0F172A] items-center justify-center shadow-sm"
+                  >
+                    <MaterialIcons name="add" size={16} color={isDark ? '#E3F2FD' : '#1F1B18'} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Tombol Checkout */}
+              <TouchableOpacity
+                onPress={handleDirectBuy}
+                activeOpacity={0.85}
+                className="bg-primary rounded-full h-12 items-center justify-center flex-row gap-2 shadow-md"
+              >
+                <MaterialIcons name="shopping-bag" size={18} color="#FFFFFF" />
+                <Text className="text-white font-bold text-base">Beli Sekarang</Text>
               </TouchableOpacity>
             </Pressable>
           </Animated.View>
