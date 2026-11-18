@@ -193,14 +193,14 @@ export default function More() {
         </SettingsSection>
 
         {/* LAINNYA */}
-        <SettingsSection title="Lainnya">
-          <SettingsRow icon="location-on" title="Alamat Pengiriman" onPress={() => {}} />
-          <SettingsRow icon="help-outline" title="Pusat Bantuan" onPress={() => {}} />
-          <SettingsRow icon="support-agent" title="Hubungi Kami" onPress={() => {}} />
-          <SettingsRow icon="info-outline" title="Tentang Aplikasi" onPress={() => {}} />
-          <SettingsRow icon="star-border" title="Beri Rating" onPress={() => {}} />
-          <SettingsRow icon="share" title="Bagikan Aplikasi" onPress={() => {}} isLast />
-        </SettingsSection>
+                <SettingsSection title="Lainnya">
+                  <SettingsRow icon="location-on" title="Alamat Pengiriman" onPress={() => router.push('/alamat-pengiriman')} />
+                  <SettingsRow icon="help-outline" title="Pusat Bantuan" onPress={() => {}} />
+                  <SettingsRow icon="support-agent" title="Hubungi Kami" onPress={() => {}} />
+                  <SettingsRow icon="info-outline" title="Tentang Aplikasi" onPress={() => {}} />
+                  <SettingsRow icon="star-border" title="Beri Rating" onPress={() => {}} />
+                  <SettingsRow icon="share" title="Bagikan Aplikasi" onPress={() => {}} isLast />
+                </SettingsSection>
 
         <Text className="text-center text-xs text-onSurfaceVariant dark:text-[#90CAF9] mt-2">
           Versi 1.0.0

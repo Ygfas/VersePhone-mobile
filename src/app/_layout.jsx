@@ -43,18 +43,26 @@ export default function RootLayout() {
                 cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
               }} />
               <Stack.Screen name="payment" options={{ 
-                animation: 'slide_from_right',
-                cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
-              }} />
-              <Stack.Screen name="cart" options={{ 
-                animation: 'slide_from_right',
-                cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
-              }} />
-              <Stack.Screen name="checkout" options={{ 
-                animation: 'slide_from_right',
-                cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
-              }} />
-            </Stack>
+                              animation: 'slide_from_right',
+                              cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
+                            }} />
+                            <Stack.Screen name="cart" options={{ 
+                              animation: 'slide_from_right',
+                              cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
+                            }} />
+                            <Stack.Screen name="checkout" options={{ 
+                              animation: 'slide_from_right',
+                              cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
+                            }} />
+                            <Stack.Screen name="alamat-pengiriman" options={{ 
+                                            animation: 'slide_from_right',
+                                            cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
+                                          }} />
+                                          <Stack.Screen name="pilih-lokasi-peta" options={{ 
+                                            animation: 'slide_from_right',
+                                            cardStyle: { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }
+                                          }} />
+                          </Stack>
     </View>
   );
 }
