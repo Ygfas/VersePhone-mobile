@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Modal, TextInput, Pressable } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Image, Modal, TextInput, Pressable, Alert } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useCart, removeFromCart } from '../store/cart';
 import { useThemeMode } from '../store/theme-store';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAddresses } from '../store/address';
 import { TopAppBar } from '../components/TopAppBar';
 
 export default function CheckoutScreen() {
@@ -14,6 +14,7 @@ export default function CheckoutScreen() {
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams();
   const cart = useCart() || [];
+  const addresses = useAddresses();
 
   // Determine items based on purchase method (buyDirect vs Cart)
   const isBuyDirect = params.buyDirect === '1';
@@ -31,34 +32,16 @@ export default function CheckoutScreen() {
 
   const checkoutItems = isBuyDirect ? (directItem ? [directItem] : []) : (Array.isArray(cart) ? cart.filter(i => i && i.checked) : []);
 
-  const [selectedAddress, setSelectedAddress] = useState({
-    name: 'Budi Santoso',
-    phone: '081234567890',
-    label: 'Rumah Utama',
-    detail: 'Jl. Jendral Sudirman No. 45, RT 02/RW 05, Senayan, Kebayoran Baru, Kota Jakarta Selatan, DKI Jakarta 12190',
-  });
+  // Address state - use address store
+  const [selectedAddress, setSelectedAddress] = useState(null);
 
-  const addresses = [
-    {
-      name: 'Budi Santoso',
-      phone: '081234567890',
-      label: 'Rumah Utama',
-      detail: 'Jl. Jendral Sudirman No. 45, RT 02/RW 05, Senayan, Kebayoran Baru, Kota Jakarta Selatan, DKI Jakarta 12190',
-    },
-    {
-      name: 'Budi Santoso (Kantor)',
-      phone: '081234567890',
-      label: 'Kantor',
-      detail: 'Gedung Cyber 2 Lt. 15, Jl. H.R. Rasuna Said Blok X-5, Kuningan, Setiabudi, Jakarta Selatan 12950',
+  // Select default address or first address on mount
+  useEffect(() => {
+    if (addresses.length > 0) {
+      const defaultAddr = addresses.find(a => a.isDefault) || addresses[0];
+      setSelectedAddress(prev => prev?.id === defaultAddr.id ? prev : defaultAddr);
     }
-  ];
-
-  const getNumericPrice = (p) => {
-    if (typeof p === 'number') return p;
-    if (!p) return 0;
-    const cleaned = String(p).replace(/[^0-9.]/g, '');
-    return parseFloat(cleaned) || 0;
-  };
+  }, [addresses]);
 
   const [showAddressModal, setShowAddressModal] = useState(false);
 
@@ -111,20 +94,31 @@ export default function CheckoutScreen() {
   const totalPayment = Math.max(0, productsSubtotal + shippingCost + adminFee - discount);
 
   const handlePayOrder = () => {
-    if (checkoutItems.length === 0) {
-      alert('Tidak ada produk yang di-checkout.');
-      return;
-    }
-    // If from cart, remove checked items from cart
-    if (!isBuyDirect) {
-      checkoutItems.forEach(item => {
-        if (item.cartKey) {
-          removeFromCart(item.cartKey);
-        }
-      });
-    }
-    setShowSuccessModal(true);
-  };
+      if (checkoutItems.length === 0) {
+        alert('Tidak ada produk yang di-checkout.');
+        return;
+      }
+      if (!selectedAddress) {
+        Alert.alert(
+          'Alamat Diperlukan',
+          'Silakan tambah alamat pengiriman terlebih dahulu sebelum checkout.',
+          [
+            { text: 'Batal', style: 'cancel' },
+            { text: 'Tambah Alamat', onPress: () => router.push('/alamat-pengiriman') },
+          ]
+        );
+        return;
+      }
+      // If from cart, remove checked items from cart
+      if (!isBuyDirect) {
+        checkoutItems.forEach(item => {
+          if (item.cartKey) {
+            removeFromCart(item.cartKey);
+          }
+        });
+      }
+      setShowSuccessModal(true);
+    };
 
   return (
     <View className="flex-1 bg-surface dark:bg-[#0F172A]">
@@ -132,34 +126,46 @@ export default function CheckoutScreen() {
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 140, gap: 16 }}>
         {/* Alamat Pengiriman (Jelas & Tidak Ambigu) */}
-        <TouchableOpacity
-          activeOpacity={0.8}
-          onPress={() => setShowAddressModal(true)}
-          className="bg-white dark:bg-[#1E293B] p-4 rounded-[20px] border border-outlineVariant dark:border-[#334155] shadow-sm"
-        >
-          <View className="flex-row items-center justify-between mb-2">
-            <View className="flex-row items-center gap-2">
-              <MaterialIcons name="location-pin" size={20} color="#2196F3" />
-              <Text className="font-bold text-sm text-onSurface dark:text-[#E3F2FD]">Alamat Pengiriman</Text>
-            </View>
-            <View className="flex-row items-center gap-1 bg-primary/10 px-3 py-1 rounded-full">
-              <Text className="text-xs font-bold text-primary">Ubah Alamat</Text>
-              <MaterialIcons name="chevron-right" size={16} color="#2196F3" />
-            </View>
-          </View>
-          <View className="mt-1 bg-surfaceContainerLow dark:bg-[#0F172A] p-3 rounded-[14px] border border-outlineVariant/50 dark:border-[#334155]">
-            <View className="flex-row items-center gap-2 mb-1">
-              <Text className="font-bold text-sm text-onSurface dark:text-[#E3F2FD]">{selectedAddress.name}</Text>
-              <Text className="text-xs text-outline dark:text-[#90CAF9]">({selectedAddress.phone})</Text>
-              <View className="bg-primary px-2 py-0.5 rounded">
-                <Text className="text-[10px] font-bold text-white">{selectedAddress.label}</Text>
-              </View>
-            </View>
-            <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] mt-1 leading-4" numberOfLines={2}>
-              {selectedAddress.detail}
-            </Text>
-          </View>
-        </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => setShowAddressModal(true)}
+                  className="bg-white dark:bg-[#1E293B] p-4 rounded-[20px] border border-outlineVariant dark:border-[#334155] shadow-sm"
+                >
+                  <View className="flex-row items-center justify-between mb-2">
+                    <View className="flex-row items-center gap-2">
+                      <MaterialIcons name="location-pin" size={20} color="#2196F3" />
+                      <Text className="font-bold text-sm text-onSurface dark:text-[#E3F2FD]">Alamat Pengiriman</Text>
+                    </View>
+                    <View className="flex-row items-center gap-1 bg-primary/10 px-3 py-1 rounded-full">
+                      <Text className="text-xs font-bold text-primary">Ubah Alamat</Text>
+                      <MaterialIcons name="chevron-right" size={16} color="#2196F3" />
+                    </View>
+                  </View>
+                  {selectedAddress ? (
+                    <View className="mt-1 bg-surfaceContainerLow dark:bg-[#0F172A] p-3 rounded-[14px] border border-outlineVariant/50 dark:border-[#334155]">
+                      <View className="flex-row items-center gap-2 mb-1">
+                        <Text className="font-bold text-sm text-onSurface dark:text-[#E3F2FD]">{selectedAddress.name}</Text>
+                        <Text className="text-xs text-outline dark:text-[#90CAF9]">({selectedAddress.phone})</Text>
+                        <View className="bg-primary px-2 py-0.5 rounded">
+                          <Text className="text-[10px] font-bold text-white">{selectedAddress.label}</Text>
+                        </View>
+                      </View>
+                      <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] mt-1 leading-4" numberOfLines={2}>
+                        {selectedAddress.detail}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View className="mt-1 bg-surfaceContainerLow dark:bg-[#0F172A] p-4 rounded-[14px] border border-outlineVariant/50 dark:border-[#334155] items-center">
+                      <MaterialIcons name="location-off" size={32} color="#80756C" />
+                      <Text className="text-sm font-medium text-onSurfaceVariant dark:text-[#90CAF9] mt-2 text-center">
+                        Belum ada alamat pengiriman
+                      </Text>
+                      <Text className="text-xs text-outline dark:text-[#90CAF9] mt-1 text-center">
+                        Tambah alamat terlebih dahulu untuk melanjutkan checkout
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
 
         {/* Daftar Produk */}
         <View className="bg-white dark:bg-[#1E293B] p-4 rounded-[20px] border border-outlineVariant dark:border-[#334155] shadow-sm">
@@ -402,39 +408,58 @@ export default function CheckoutScreen() {
       </Modal>
 
       {/* MODAL ADDRESS PICKER */}
-      <Modal visible={showAddressModal} transparent animationType="slide">
-        <Pressable className="flex-1 justify-end bg-black/50" onPress={() => setShowAddressModal(false)}>
-          <Pressable className="bg-surface dark:bg-[#0F172A] rounded-t-[24px] p-6 gap-3">
-            <Text className="text-lg font-bold text-onSurface dark:text-[#E3F2FD] mb-2">Pilih Alamat Pengiriman</Text>
-            {addresses.map(addr => {
-              const isSelected = selectedAddress.name === addr.name;
-              return (
-                <TouchableOpacity
-                  key={addr.label}
-                  onPress={() => {
-                    setSelectedAddress(addr);
-                    setShowAddressModal(false);
-                  }}
-                  className={`p-4 rounded-[16px] border ${isSelected ? 'border-primary bg-primary/10' : 'border-outlineVariant dark:border-[#334155] bg-surfaceContainerLow dark:bg-[#0F172A]'}`}
-                >
-                  <View className="flex-row items-center justify-between mb-1">
-                    <View className="flex-row items-center gap-2">
-                      <Text className="font-bold text-sm text-onSurface dark:text-[#E3F2FD]">{addr.name}</Text>
-                      <View className={`px-2 py-0.5 rounded ${isSelected ? 'bg-primary' : 'bg-surfaceContainerHigh'}`}>
-                        <Text className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-outline'}`}>{addr.label}</Text>
-                      </View>
+            <Modal visible={showAddressModal} transparent animationType="slide">
+              <Pressable className="flex-1 justify-end bg-black/50" onPress={() => setShowAddressModal(false)}>
+                <Pressable className="bg-surface dark:bg-[#0F172A] rounded-t-[24px] p-6 gap-3">
+                  <Text className="text-lg font-bold text-onSurface dark:text-[#E3F2FD] mb-2">Pilih Alamat Pengiriman</Text>
+                  {addresses.length > 0 ? (
+                    addresses.map(addr => {
+                      const isSelected = selectedAddress && selectedAddress.id === addr.id;
+                      return (
+                        <TouchableOpacity
+                          key={addr.id}
+                          onPress={() => {
+                            setSelectedAddress(addr);
+                            setShowAddressModal(false);
+                          }}
+                          className={`p-4 rounded-[16px] border ${isSelected ? 'border-primary bg-primary/10' : 'border-outlineVariant dark:border-[#334155] bg-surfaceContainerLow dark:bg-[#0F172A]'}`}
+                        >
+                          <View className="flex-row items-center justify-between mb-1">
+                            <View className="flex-row items-center gap-2">
+                              <Text className="font-bold text-sm text-onSurface dark:text-[#E3F2FD]">{addr.name}</Text>
+                              <View className={`px-2 py-0.5 rounded ${isSelected ? 'bg-primary' : 'bg-surfaceContainerHigh'}`}>
+                                <Text className={`text-[10px] font-bold ${isSelected ? 'text-white' : 'text-outline'}`}>{addr.label}</Text>
+                              </View>
+                            </View>
+                            {isSelected && <MaterialIcons name="check-circle" size={20} color="#2196F3" />}
+                          </View>
+                          <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] mt-1" numberOfLines={2}>
+                            {addr.detail}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })
+                  ) : (
+                    <View className="items-center py-6">
+                      <MaterialIcons name="location-off" size={48} color="#80756C" />
+                      <Text className="text-sm text-onSurfaceVariant dark:text-[#90CAF9] mt-3 text-center">
+                        Belum ada alamat tersimpan
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setShowAddressModal(false);
+                          router.push('/alamat-pengiriman');
+                        }}
+                        activeOpacity={0.8}
+                        className="bg-primary px-6 py-2.5 rounded-[12px] mt-4"
+                      >
+                        <Text className="text-white font-bold text-xl px-10">Tambah Alamat</Text>
+                      </TouchableOpacity>
                     </View>
-                    {isSelected && <MaterialIcons name="check-circle" size={20} color="#2196F3" />}
-                  </View>
-                  <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] mt-1" numberOfLines={2}>
-                    {addr.detail}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </Pressable>
-        </Pressable>
-      </Modal>
+                  )}
+                </Pressable>
+              </Pressable>
+            </Modal>
     </View>
   );
 }
