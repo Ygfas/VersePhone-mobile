@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "test-react-native",
-    "slug": "test-react-native",
+    "name": "versephone",
+    "slug": "versephone",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -34,10 +34,15 @@
           "imageWidth": 76
         }
       ],
-      "expo-video"
+      "expo-video",
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
-      "Google_client_auth": "56321620017-urs0kl8hr0lghilh2h6sie3o51s3pijv.apps.googleusercontent.com"
+      "Google_client_auth": "56321620017-urs0kl8hr0lghilh2h6sie3o51s3pijv.apps.googleusercontent.com",
+      "router": {},
+      "eas": {
+        "projectId": "7cbaffed-d8ec-455c-8301-89ec1370c698"
+      }
     },
     "experiments": {
       "typedRoutes": true,

@@ -116,38 +116,29 @@ export async function loginWithGoogle() {
       process.env.Google_client_auth ||
       "56321620017-urs0kl8hr0lghilh2h6sie3o51s3pijv.apps.googleusercontent.com";
 
-    const redirectUri = AuthSession.makeRedirectUri({
-      scheme: "testreactnative",
-      preferLocalhost: true,
-    });
+    const redirectUri = "com.versephone.app://oauth2redirect";
+    console.log("Google Auth Redirect URI:", redirectUri);
 
     const discovery = await AuthSession.fetchDiscoveryAsync(
       "https://accounts.google.com"
     );
 
-    const [request, response, promptAsync] = AuthSession.useAuthRequest(
-      {
-        clientId,
-        scopes: ["openid", "profile", "email"],
-        redirectUri,
-        responseType: "id_token",
-        usePKCE: true,
-      },
-      discovery
-    );
+    const authRequest = new AuthSession.AuthRequest({
+      clientId,
+      scopes: ["openid", "profile", "email"],
+      redirectUri,
+      responseType: AuthSession.ResponseType.Code,
+      usePKCE: true,
+    });
 
-    const result = await promptAsync();
+    const result = await authRequest.promptAsync(discovery);
 
     if (result.type === "success") {
-      const { id_token } = result.params;
-
-      if (!id_token) {
-        throw new Error("ID token tidak diterima dari Google");
-      }
+      const { code } = result.params;
 
       const data = await apiRequest("/api/auth/google", {
         method: "POST",
-        body: JSON.stringify({ idToken: id_token }),
+        body: JSON.stringify({ code }),
       });
 
       setAuth(data.user);
