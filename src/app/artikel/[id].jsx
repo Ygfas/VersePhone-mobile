@@ -43,15 +43,21 @@ export default function ArticlePage() {
         <View className="px-4 pt-5">
           <Text className="text-2xl font-bold text-onSurface dark:text-[#E3F2FD] leading-8">{article.title}</Text>
 
-          {article.summary ? (
+          {/* {article.summary ? (
             <Text className="text-sm text-onSurfaceVariant dark:text-[#90CAF9] dark:text-[#E3F2FD] mt-3 leading-5">
               {article.summary}
             </Text>
-          ) : null}
+          ) : null} */}
 
           <View className="h-px bg-outlineVariant my-5" />
 
           <Text className="text-[15px] text-onSurface dark:text-[#E3F2FD] leading-7">{safeBody}</Text>
+
+          {article.sumber ? (
+            <Text className="text-lg text-onSurfaceVariant dark:text-[#90CAF9] mt-6 italic">
+              Sumber: {article.sumber}
+            </Text>
+          ) : null}
         </View>
       </ScrollView>
     </View>
