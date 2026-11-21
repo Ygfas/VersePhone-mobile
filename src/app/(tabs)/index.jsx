@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { View, ScrollView, Image, Text, TouchableOpacity, Modal, Pressable, FlatList, useWindowDimensions, Animated, InteractionManager, TextInput } from 'react-native';
+import { View, ScrollView, Image, Text, TouchableOpacity, Modal, Pressable, FlatList, useWindowDimensions, Animated, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -12,6 +12,8 @@ import { useThemeMode } from '../../store/theme-store';
 import { useTranslatedText } from '../../store/language-store';
 import { useWishlist, addToWishlist, removeFromWishlist } from '../../store/wishlist';
 import { useSearchHistory, addSearchHistory, removeSearchHistory, clearSearchHistory } from '../../store/search-history';
+import { useCart } from '../../store/cart';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- SUB-COMPONENT CARD VIDEO (Grid Thumbnail - Auto-play & Muted) ---
 function VideoGridCard({ videoSrc, onPress }) {
@@ -323,7 +325,9 @@ export default function Home() {
   const [showSearchHistory, setShowSearchHistory] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchHistory = useSearchHistory();
-    const [productTab, setProductTab] = useState('Semua');
+  const cart = useCart() || [];
+  const totalCartQty = cart.reduce((sum, item) => sum + (item.qty || 1), 0);
+  const [productTab, setProductTab] = useState('Semua');
     const [selectedVideo, setSelectedVideo] = useState(null);
 
     // Snackbar & Success Popup states (mirip detail screen)
@@ -417,13 +421,47 @@ export default function Home() {
   const [productsLoading, setProductsLoading] = useState(true);
   const [productsError, setProductsError] = useState(null);
 
+  // Load cache sementara dari AsyncStorage agar saat refresh/tidak keluar app data langsung tampil tanpa relog/re-fetch terus
+  useEffect(() => {
+    (async () => {
+      try {
+        const cachedProducts = await AsyncStorage.getItem('verse_cache_products');
+        if (cachedProducts) {
+          const parsed = JSON.parse(cachedProducts);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setProducts(parsed);
+            setProductsLoading(false);
+          }
+        }
+        const cachedIklan = await AsyncStorage.getItem('verse_cache_iklan');
+        if (cachedIklan) {
+          const parsed = JSON.parse(cachedIklan);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setIklan(parsed);
+            setIklanLoading(false);
+          }
+        }
+        const cachedArticles = await AsyncStorage.getItem('verse_cache_articles');
+        if (cachedArticles) {
+          const parsed = JSON.parse(cachedArticles);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setArticles(parsed);
+            setArticlesLoading(false);
+          }
+        }
+      } catch (_e) {
+        // ignore cache read error
+      }
+    })();
+  }, []);
+
   // MEMANGGIL ENDPOINT API PRODUK NEXT.JS (deklarasi sebelum useEffect agar tidak violate react-hooks/immutability)
   const fetchProducts = useCallback(async () => {
     try {
-      setProductsLoading(true);
+      if (products.length === 0) setProductsLoading(true);
       const API_URL = getApiBaseUrl();
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
+      const timeout = setTimeout(() => controller.abort(), 6000);
       const response = await fetch(`${API_URL}/api/product`, { signal: controller.signal });
       clearTimeout(timeout);
       const data = await response.json();
@@ -432,8 +470,9 @@ export default function Home() {
         const mappedProducts = data.map((item) => {
           try {
             const rawImage = item?.gambar;
+            const API_URL = getApiBaseUrl();
             const image = typeof rawImage === 'string' && rawImage.trim()
-              ? `data:image/jpeg;base64,${rawImage.trim()}`
+              ? (rawImage.startsWith('http') ? rawImage : rawImage.startsWith('/') ? `${API_URL}${rawImage}` : `data:image/jpeg;base64,${rawImage.trim()}`)
               : null;
             const jenis = item?.jenis || item?.nama || '';
             const slug = jenis.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
@@ -451,23 +490,27 @@ export default function Home() {
           }
         }).filter(Boolean);
         setProducts(mappedProducts);
-      } else {
+        AsyncStorage.setItem('verse_cache_products', JSON.stringify(mappedProducts)).catch(() => {});
+        setProductsError(null);
+      } else if (products.length === 0) {
         setProductsError('Gagal memuat produk dari server');
       }
     } catch (err) {
       console.error('Error fetching products:', err);
-      setProductsError('Gagal terhubung ke server API produk');
+      if (products.length === 0) {
+        setProductsError('Gagal terhubung ke server API produk');
+      }
     } finally {
       setProductsLoading(false);
     }
-  }, []);
+  }, [products.length]);
 
   const fetchIklan = useCallback(async () => {
     try {
-      setIklanLoading(true);
+      if (iklan.length === 0) setIklanLoading(true);
       const API_URL = getApiBaseUrl();
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
+      const timeout = setTimeout(() => controller.abort(), 6000);
       const response = await fetch(`${API_URL}/api/iklan`, { signal: controller.signal });
       clearTimeout(timeout);
       const data = await response.json();
@@ -479,36 +522,29 @@ export default function Home() {
           image: item?.gambar ?? null,
         }));
         setIklan(mapped);
+        AsyncStorage.setItem('verse_cache_iklan', JSON.stringify(mapped)).catch(() => {});
       }
     } catch (_e) {
-      // Gagal ambil iklan -> blok promo tidak dirender, aplikasi tetap jalan
+      // Gagal ambil iklan -> tetap pakai cache
     } finally {
       setIklanLoading(false);
     }
-  }, []);
+  }, [iklan.length]);
 
   const fetchArticles = useCallback(async () => {
     try {
-      setArticlesLoading(true);
-      // Host API otomatis mengikuti host dev server (WiFi / hotspot) — lihat lib/api.js
+      if (articles.length === 0) setArticlesLoading(true);
       const API_URL = getApiBaseUrl();
-      // Timeout 10 detik: fetch yang menggantung tidak membekukan UI
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 10000);
+      const timeout = setTimeout(() => controller.abort(), 6000);
       const response = await fetch(`${API_URL}/api/artikel`, { signal: controller.signal });
       clearTimeout(timeout);
       const data = await response.json();
 
       if (response.ok) {
-        // Mapping kolom dari tabel database ke properti yang dibutuhkan UI.
-        // Dibuat kebal: data aneh (angka, null, response bukan array) ditangani
-        // per item — tidak akan membuat aplikasi crash.
         const mappedArticles = (Array.isArray(data) ? data : []).map((item) => {
           try {
             const rawImage = item?.gambar_artikel || item?.gambar || item?.image;
-            // Gambar yang sudah punya skema (http(s)://, data:, file:, content:)
-            // dibiarkan apa adanya. Hanya path relatif ("/uploads/...") yang
-            // disambung jadi URL absolut.
             const image =
               typeof rawImage === 'string' && rawImage.trim()
                 ? /^(https?:\/\/|data:|file:|content:)/i.test(rawImage.trim())
@@ -521,10 +557,10 @@ export default function Home() {
               title: item?.judul_artikel || item?.judul || item?.title,
               summary: item?.ringkasan_artikel || item?.ringkasan || item?.summary || tClickDetail,
               body: item?.isi_artikel || item?.konten || item?.isi || item?.body,
+              sumber: item?.sumber_artikel || item?.sumber || item?.source || null,
               image,
             };
           } catch {
-            // Satu baris data bermasalah -> dilewati, bukan crash
             return {
               id: null,
               title: item?.judul_artikel || item?.judul || item?.title || 'Artikel',
@@ -535,29 +571,33 @@ export default function Home() {
           }
         });
         setArticles(mappedArticles);
-      } else {
+        AsyncStorage.setItem('verse_cache_articles', JSON.stringify(mappedArticles)).catch(() => {});
+        setArticlesError(null);
+      } else if (articles.length === 0) {
         setArticlesError(tLoadArticleFail);
       }
     } catch (err) {
       console.error('Error fetching articles:', err);
-      setArticlesError(tConnectFail);
+      if (articles.length === 0) {
+        setArticlesError(tConnectFail);
+      }
     } finally {
       setArticlesLoading(false);
     }
-  }, [tClickDetail, tConnectFail, tLoadArticleFail]);
+  }, [articles.length, tClickDetail, tConnectFail, tLoadArticleFail]);
 
   // Trigger fetch setelah interaksi awal selesai (render cepat, baru load data)
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => { fetchProducts(); });
-    return () => task.cancel();
+    const timer = setTimeout(() => { fetchProducts(); }, 100);
+    return () => clearTimeout(timer);
   }, [fetchProducts]);
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => { fetchIklan(); });
-    return () => task.cancel();
+    const timer = setTimeout(() => { fetchIklan(); }, 150);
+    return () => clearTimeout(timer);
   }, [fetchIklan]);
   useEffect(() => {
-    const task = InteractionManager.runAfterInteractions(() => { fetchArticles(); });
-    return () => task.cancel();
+    const timer = setTimeout(() => { fetchArticles(); }, 50);
+    return () => clearTimeout(timer);
   }, [fetchArticles]);
 
 
@@ -666,9 +706,16 @@ export default function Home() {
         <TouchableOpacity
           onPress={() => router.push('/cart')}
           activeOpacity={0.8}
-          className="w-11 h-11 rounded-full bg-surfaceContainerHigh dark:bg-[#1E293B] items-center justify-center"
+          className="w-11 h-11 rounded-full bg-surfaceContainerHigh dark:bg-[#1E293B] items-center justify-center relative"
         >
           <MaterialIcons name="shopping-cart" size={24} color={isDarkMode ? "#E3F2FD" : "#0D47A1"} />
+          {totalCartQty > 0 && (
+            <View className="absolute -top-1 -right-2 bg-blue-500 rounded-full min-w-[20px] h-[20px] px-1 items-center justify-center">
+              <Text className="text-[10px] font-bold text-white text-center">
+                {totalCartQty}
+              </Text>
+            </View>
+          )}
         </TouchableOpacity>
       </Animated.View>
 

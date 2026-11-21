@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, Image, Modal, Pressable, Share, Linking, Animated, Easing } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createURL } from 'expo-linking';
 import * as Clipboard from 'expo-clipboard';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
@@ -36,21 +37,40 @@ export default function Detail() {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [imageUri, setImageUri] = useState(null);
 
-  // Fetch product detail from API using slug
-  useEffect(() => {
-    const fetchProduct = async () => {
-      if (!slug) {
+  const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  const fetchProduct = async () => {
+    if (!slug) {
+      setLoading(false);
+      setError('Produk tidak ditemukan');
+      return;
+    }
+
+    // Muat cache lokal dulu agar detail produk tampil segera saat buka ulang
+    try {
+      const cached = await AsyncStorage.getItem(`verse_cache_product_detail_${slug}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setProduct(parsed);
+        if (parsed.colors && parsed.colors.length > 0) {
+          setSelectedColor(parsed.colors[0]);
+        }
         setLoading(false);
-        setError('Produk tidak ditemukan');
         return;
       }
+    } catch (_e) {
+      // ignore cache read error
+    }
 
+    let lastErr;
+    for (let i = 0; i < 3; i++) {
       try {
         setLoading(true);
         const API_URL = getApiBaseUrl();
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
+        const timeout = setTimeout(() => controller.abort(), 8000);
         const response = await fetch(`${API_URL}/api/product/${slug}`, { signal: controller.signal });
         clearTimeout(timeout);
         const data = await response.json();
@@ -60,17 +80,23 @@ export default function Detail() {
           if (data.colors && data.colors.length > 0) {
             setSelectedColor(data.colors[0]);
           }
+          AsyncStorage.setItem(`verse_cache_product_detail_${slug}`, JSON.stringify(data)).catch(() => {});
+          return;
         } else {
           setError(data?.error || 'Produk tidak ditemukan');
+          return;
         }
       } catch (err) {
+        lastErr = err;
         console.error('Error fetching product detail:', err);
-        setError('Gagal terhubung ke server');
-      } finally {
-        setLoading(false);
+        if (i < 2) await delay(1000);
       }
-    };
+    }
+    setError(lastErr?.message || 'Gagal terhubung ke server');
+    setLoading(false);
+  };
 
+  useEffect(() => {
     fetchProduct();
   }, [slug]);
 
@@ -212,7 +238,7 @@ export default function Detail() {
     const productVariant = product?.storage?.[0] ? `${product.storage[0]}` : (product?.specs?.RAM ? `${product.specs.RAM} / ${product.specs['Internal Storage (ROM)'] || ''}` : '12GB/256GB');
     const productPrice = product?.price ? `Rp ${product.price.toLocaleString('id-ID')}` : 'Rp 21.999.000';
     const productStock = product?.stock ?? product?.stok ?? 0;
-    const productImage = product?.image || 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg';
+    const productImage = product?.image ? (product.image.startsWith('http') ? product.image : `${getApiBaseUrl()}${product.image}`) : 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg';
     const productColors = product?.colors?.length > 0 ? product.colors.map((c, i) => ({ name: c, hex: ['#3B82F6', '#1E293B', '#94A3B8', '#EF4444', '#10B981'][i] || '#3B82F6' })) : [
       { name: 'Blue', hex: '#3B82F6' },
       { name: 'Black', hex: '#1E293B' },
@@ -229,16 +255,19 @@ export default function Detail() {
       const arr = String(raw).split(/[,/]/).map(s => s.trim()).filter(Boolean);
       return arr.length ? arr : (product?.storage?.length ? product.storage : ['128GB', '256GB']);
     })();
-    const productSpecs = product?.specs ? Object.entries(product.specs).map(([label, value]) => ({ label, value })) : [
+    // Gabungkan spesifikasi dari API dengan default jika ada yang kurang
+    const apiSpecs = product?.specs || {};
+    const productSpecs = [
       { label: 'Brand', value: productBrand },
       { label: 'Model', value: productName },
-      { label: 'Processor', value: product?.specs?.['Processor (SoC)'] || 'Snapdragon 8 Gen 3' },
-      { label: 'RAM', value: product?.specs?.RAM || '12 GB' },
-      { label: 'ROM / Storage', value: product?.specs?.['Internal Storage (ROM)'] || '256 GB' },
-      { label: 'Layar', value: product?.specs?.Layar || '6.8 inch Dynamic AMOLED 2X' },
-      { label: 'Kamera Utama', value: product?.specs?.['Kamera Belakang'] || '200 MP + 50 MP + 12 MP + 10 MP' },
-      { label: 'Baterai', value: product?.specs?.['Kapasitas Baterai'] || '5000 mAh (Fast Charging 45W)' },
-      { label: 'Sistem Operasi', value: product?.specs?.['Sistem Operasi'] || 'Android 14, One UI 6.1' },
+      { label: 'Processor', value: apiSpecs['Processor (SoC)'] || 'Snapdragon 8 Gen 3' },
+      { label: 'RAM', value: apiSpecs.RAM || '12 GB' },
+      { label: 'ROM / Storage', value: apiSpecs['Internal Storage (ROM)'] || '256 GB' },
+      { label: 'Layar', value: apiSpecs.Layar || '6.8 inch Dynamic AMOLED 2X' },
+      { label: 'Kamera Utama', value: apiSpecs['Kamera Belakang'] || apiSpecs['Kamera Utama'] || '200 MP + 50 MP + 12 MP + 10 MP' },
+      { label: 'Kamera Depan', value: apiSpecs['Kamera Depan'] || apiSpecs['Selfie Camera'] || '12 MP' },
+      { label: 'Baterai', value: apiSpecs['Kapasitas Baterai'] || '5000 mAh (Fast Charging 45W)' },
+      { label: 'Sistem Operasi', value: apiSpecs['Sistem Operasi'] || 'Android 14, One UI 6.1' },
     ];
 
     // Wishlist (tersimpan = bookmark bold, bisa dihapus) — ID sama dengan home screen agar sinkron
@@ -383,7 +412,7 @@ export default function Detail() {
                     {/* GAMBAR DI ATAS — contain + bg putih agar tidak terpotong */}
                     <View className="w-full h-[300px] bg-white dark:bg-[#1E293B] relative overflow-hidden items-center justify-center">
                                           <ImageWithFallback
-                                            uri={productImage}
+                                            uri={imageUri || productImage}
                                             style={{ width: '100%', height: '100%' }}
                                             contentFit="contain"
                                             className="bg-white"
