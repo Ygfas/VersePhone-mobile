@@ -165,23 +165,24 @@ export default function Detail() {
   };
   
   const handleDirectBuy = () => {
-    const numericPrice = typeof product?.price === 'number' ? product.price : 21999000;
-    closeBuySheet();
-    router.push({
-      pathname: '/checkout',
-      params: {
-        buyDirect: '1',
-        name: productName,
-        brand: productBrand,
-        price: String(numericPrice),
-        image: productImage,
-        color: selectedColor,
-        ram: selectedRam || ramOptions[0] || '',
-        rom: selectedRom || romOptions[0] || '',
-        qty: String(buyQty),
-      },
-    });
-  };
+      const numericPrice = typeof product?.price === 'number' ? product.price : 21999000;
+      closeBuySheet();
+      router.push({
+        pathname: '/checkout',
+        params: {
+          buyDirect: '1',
+          id: String(product?.id || 1),
+          name: productName,
+          brand: productBrand,
+          price: String(numericPrice),
+          image: productImage,
+          color: selectedColor,
+          ram: selectedRam || ramOptions[0] || '',
+          rom: selectedRom || romOptions[0] || '',
+          qty: String(buyQty),
+        },
+      });
+    };
 
   const handleAddToCart = () => {
     const item = {

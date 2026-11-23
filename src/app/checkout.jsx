@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Image, Modal, TextInput, Pressable, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Image, Modal, TextInput, Pressable, Alert, ActivityIndicator } from 'react-native';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useCart, removeFromCart } from '../store/cart';
 import { useThemeMode } from '../store/theme-store';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAddresses } from '../store/address';
+import { useAuth } from '../store/auth';
 import { TopAppBar } from '../components/TopAppBar';
+import { getApiBaseUrl } from '../lib/api';
+import * as WebBrowser from 'expo-web-browser';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -15,6 +19,9 @@ export default function CheckoutScreen() {
   const params = useLocalSearchParams();
   const cart = useCart() || [];
   const addresses = useAddresses();
+  const auth = useAuth();
+  const user = auth?.user;
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Determine items based on purchase method (buyDirect vs Cart)
   const isBuyDirect = params.buyDirect === '1';
@@ -56,12 +63,13 @@ export default function CheckoutScreen() {
 
   // Payment method state
   const paymentMethods = [
-    { id: 'bca', name: 'Transfer Bank BCA', icon: 'account-balance', group: 'Transfer Bank' },
-    { id: 'mandiri', name: 'Transfer Bank Mandiri', icon: 'account-balance', group: 'Transfer Bank' },
-    { id: 'bri', name: 'Transfer Bank BRI', icon: 'account-balance', group: 'Transfer Bank' },
+    { id: 'all', name: 'Midtrans Payment Gateway (Semua Metode)', icon: 'payment', group: 'Midtrans Gateway' },
+    { id: 'qris', name: 'QRIS (Gopay, Dana, OVO, ShopeePay)', icon: 'qr-code', group: 'E-Wallet & QRIS' },
     { id: 'gopay', name: 'GoPay / GoPay Later', icon: 'account-balance-wallet', group: 'E-Wallet & QRIS' },
-    { id: 'ovo', name: 'OVO Digital', icon: 'account-balance-wallet', group: 'E-Wallet & QRIS' },
-    { id: 'qris', name: 'QRIS (Semua QR Code)', icon: 'qr-code', group: 'E-Wallet & QRIS' },
+    { id: 'bca', name: 'Transfer Bank BCA (Virtual Account)', icon: 'account-balance', group: 'Transfer Bank' },
+    { id: 'mandiri', name: 'Transfer Bank Mandiri (Bill Payment)', icon: 'account-balance', group: 'Transfer Bank' },
+    { id: 'bri', name: 'Transfer Bank BRI (Virtual Account)', icon: 'account-balance', group: 'Transfer Bank' },
+    { id: 'credit_card', name: 'Kartu Kredit / Debit Online', icon: 'credit-card', group: 'Kartu Pembayaran' },
     { id: 'cod', name: 'COD (Bayar di Tempat)', icon: 'local-shipping', group: 'Bayar di Tempat' },
   ];
   const [selectedPayment, setSelectedPayment] = useState(paymentMethods[0]);
@@ -93,32 +101,125 @@ export default function CheckoutScreen() {
   const adminFee = 1000;
   const totalPayment = Math.max(0, productsSubtotal + shippingCost + adminFee - discount);
 
-  const handlePayOrder = () => {
-      if (checkoutItems.length === 0) {
-        alert('Tidak ada produk yang di-checkout.');
-        return;
+  const handlePayOrder = async () => {
+    if (checkoutItems.length === 0) {
+      Alert.alert('Checkout Kosong', 'Tidak ada produk yang dipilih untuk di-checkout.');
+      return;
+    }
+    if (!selectedAddress) {
+      Alert.alert('Alamat Diperlukan', 'Silakan pilih atau tambah alamat pengiriman terlebih dahulu sebelum checkout.', [
+        { text: 'Batal', style: 'cancel' },
+        { text: 'Tambah Alamat', onPress: () => router.push('/alamat-pengiriman') },
+      ]);
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const payload = {
+        id_produk: checkoutItems[0].id,
+        first_name: selectedAddress.name,
+        user_name: user?.username || selectedAddress.name || 'User',
+        alamat: selectedAddress.detail,
+        no_tlp_or_email: selectedAddress.phone,
+        payment_type: selectedPayment.id,
+        price: totalPayment,
+        shipping_cost: shippingCost,
+        admin_fee: adminFee,
+        discount: discount,
+        id_user: user?.id || user?.id_user || null,
+        id_alamat: selectedAddress.id && !isNaN(Number(selectedAddress.id)) ? Number(selectedAddress.id) : null,
+        items: checkoutItems.map(i => ({
+          id: i.id,
+          name: i.name,
+          price: i.price,
+          qty: i.qty || 1,
+        })),
+      };
+
+      console.log('[Checkout] Submitting payment to API:', payload);
+
+      const response = await fetch(`${getApiBaseUrl()}/api/payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      console.log('[Checkout] API Response:', data);
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Pembayaran gagal diproses oleh server.');
       }
-      if (!selectedAddress) {
-        Alert.alert(
-          'Alamat Diperlukan',
-          'Silakan tambah alamat pengiriman terlebih dahulu sebelum checkout.',
-          [
-            { text: 'Batal', style: 'cancel' },
-            { text: 'Tambah Alamat', onPress: () => router.push('/alamat-pengiriman') },
-          ]
-        );
-        return;
+
+      // Simpan riwayat ID pesanan ke AsyncStorage lokal
+      if (data.order_id) {
+        try {
+          const raw = await AsyncStorage.getItem('verse_local_orders');
+          const list = raw ? JSON.parse(raw) : [];
+          if (!list.includes(data.order_id)) {
+            list.unshift(data.order_id);
+            await AsyncStorage.setItem('verse_local_orders', JSON.stringify(list.slice(0, 50)));
+          }
+        } catch (storageErr) {
+          console.warn('[Checkout] Failed to save local order id:', storageErr);
+        }
       }
-      // If from cart, remove checked items from cart
+
+      // Bersihkan keranjang jika checkout berhasil dibuat
       if (!isBuyDirect) {
         checkoutItems.forEach(item => {
-          if (item.cartKey) {
-            removeFromCart(item.cartKey);
-          }
+          const key = item.cartKey || item.id;
+          if (key) removeFromCart(key);
         });
       }
-      setShowSuccessModal(true);
-    };
+
+      // Jika metode COD atau tidak ada redirectUrl Midtrans
+      if (!data.redirectUrl) {
+        setShowSuccessModal(true);
+        return;
+      }
+
+      // Buka halaman pembayaran Midtrans Snap di in-app browser
+      console.log('[Checkout] Opening Midtrans Snap URL:', data.redirectUrl);
+      const browserResult = await WebBrowser.openBrowserAsync(data.redirectUrl);
+      console.log('[Checkout] Browser closed with result:', browserResult);
+
+      // Sinkronkan status pembayaran terbaru dari server/Midtrans
+      try {
+        const checkRes = await fetch(`${getApiBaseUrl()}/api/payment?order_id=${data.order_id}`);
+        const checkData = await checkRes.json();
+        console.log('[Checkout] Payment verification status:', checkData);
+
+        if (checkData.status === 'Success') {
+          setShowSuccessModal(true);
+        } else if (checkData.status === 'Cancelled') {
+          Alert.alert('Pembayaran Dibatalkan', 'Transaksi ini telah dibatalkan atau waktu pembayaran kadaluarsa.');
+        } else {
+          // Status Pending (misal transfer bank / QRIS menunggu pembayaran)
+          Alert.alert(
+            'Pesanan Berhasil Dibuat',
+            `Kode Transaksi: ${data.order_id}\n\nStatus pesanan Anda saat ini "Menunggu Pembayaran". Silakan selesaikan pembayaran sesuai instruksi.`,
+            [
+              {
+                text: 'Selesai',
+                onPress: () => setShowSuccessModal(true),
+              },
+            ]
+          );
+        }
+      } catch (err) {
+        console.warn('[Checkout] Failed to sync status after browser close:', err);
+        setShowSuccessModal(true);
+      }
+    } catch (e) {
+      console.error('[Checkout] Pay Order Error:', e);
+      Alert.alert('Gagal Memproses Pembayaran', e.message || 'Gagal terhubung ke server pembayaran Midtrans.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <View className="flex-1 bg-surface dark:bg-[#0F172A]">
@@ -311,11 +412,18 @@ export default function CheckoutScreen() {
         </View>
         <TouchableOpacity
           onPress={handlePayOrder}
+          disabled={isProcessing}
           activeOpacity={0.85}
-          className="bg-primary px-8 py-3.5 rounded-[16px] shadow-md flex-row items-center gap-2"
+          className={`bg-primary px-8 py-3.5 rounded-[16px] shadow-md flex-row items-center gap-2 ${isProcessing ? 'opacity-70' : ''}`}
         >
-          <MaterialIcons name="" size={16} color="#FFFFFF" />
-          <Text className="text-white font-bold text-base">Bayar Sekarang</Text>
+          {isProcessing ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <MaterialIcons name="lock" size={16} color="#FFFFFF" />
+          )}
+          <Text className="text-white font-bold text-base">
+            {isProcessing ? 'Memproses...' : 'Bayar Sekarang'}
+          </Text>
         </TouchableOpacity>
       </View>
 
