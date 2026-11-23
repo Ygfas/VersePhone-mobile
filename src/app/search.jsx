@@ -61,7 +61,7 @@ export default function SearchScreen() {
       const API_URL = getApiBaseUrl();
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
-      const response = await fetch(`${API_URL}/api/product`, { signal: controller.signal });
+      const response = await fetch(`${API_URL}/api/product/search`, { signal: controller.signal });
       clearTimeout(timeout);
       const data = await response.json();
 
@@ -71,7 +71,7 @@ export default function SearchScreen() {
             const rawImage = item?.gambar;
             const image = typeof rawImage === 'string' && rawImage.trim()
               ? `data:image/jpeg;base64,${rawImage.trim()}`
-              : null;
+              : (item?.id_produk ? `${API_URL}/api/product/image/${item.id_produk}?v=${Date.now()}` : null);
             const jenis = item?.jenis || item?.nama || '';
             const slug = jenis.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
             return {

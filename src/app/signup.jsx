@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, Alert, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, Alert, Platform, KeyboardAvoidingView, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { TopAppBar } from "../components/TopAppBar";
 import { Button } from "../components/Button";
@@ -149,26 +149,30 @@ export default function SignUp() {
   };
 
   return (
-    <View className="flex-1 bg-surface dark:bg-[#0F172A]">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      className="flex-1 bg-surface dark:bg-[#0F172A]"
+    >
       <TopAppBar leftIcon="arrow-back" onLeftPress={() => router.back()} />
 
-      <TouchableOpacity className="absolute top-[48px] right-4" onPress={() => router.push("/login")}>
+      <TouchableOpacity className="absolute top-[48px] right-4 z-10" onPress={() => router.push("/login")}>
         <Text className="text-xl mt-7 text-primary dark:text-[#90CAF9] font-medium">{tLogin}</Text>
       </TouchableOpacity>
 
-      {/* INFORMASI HALAMAN SIGN UP */}
-      <View className="px-6 mt-6">
-        <Text className="text-2xl font-bold text-black dark:text-[#E3F2FD]">
-          Buat Akun Baru
-        </Text>
-        <Text className="text-sm text-onSurfaceVariant dark:text-[#90CAF9] mt-1">
-          Lengkapi data diri Anda di bawah ini untuk mendaftar dan mulai menggunakan aplikasi.
-        </Text>
-      </View>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 280 }} keyboardShouldPersistTaps="handled">
+        {/* INFORMASI HALAMAN SIGN UP */}
+        <View className="px-6 mt-2">
+          <Text className="text-xl font-bold text-black dark:text-[#E3F2FD]">
+            Buat Akun Baru
+          </Text>
+          <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] mt-0.5">
+            Lengkapi data diri Anda di bawah ini untuk mendaftar dan mulai menggunakan aplikasi.
+          </Text>
+        </View>
 
-      <View className="p-4 mt-4 flex-1 items-center">
+        <View className="px-4 py-2 mt-1 flex-1 items-center">
         {/* INPUT NAME / USERNAME */}
-        <View className="w-full mb-6">
+        <View className="w-full mb-0">
           <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tNameOrUsername}</Text>
           <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
             <MaterialIcons name="person" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
@@ -186,7 +190,7 @@ export default function SignUp() {
         </View>
 
         {/* INPUT NOMOR SELULER */}
-        <View className="w-full mb-6">
+        <View className="w-full mb-0">
           <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tPhoneNumber}</Text>
           <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
             <MaterialIcons name="phone" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
@@ -204,7 +208,7 @@ export default function SignUp() {
         </View>
 
         {/* INPUT EMAIL */}
-        <View className="w-full mb-6">
+        <View className="w-full mb-0">
           <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tEmail}</Text>
           <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
             <MaterialIcons name="mail" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
@@ -295,6 +299,7 @@ export default function SignUp() {
 
 
       </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

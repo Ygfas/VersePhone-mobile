@@ -472,7 +472,7 @@ export default function Home() {
             const rawImage = item?.gambar;
             const API_URL = getApiBaseUrl();
             const image = typeof rawImage === 'string' && rawImage.trim()
-              ? (rawImage.startsWith('http') ? rawImage : rawImage.startsWith('/') ? `${API_URL}${rawImage}` : `data:image/jpeg;base64,${rawImage.trim()}`)
+              ? (rawImage.startsWith('http') ? rawImage : rawImage.startsWith('/') ? `${API_URL}${rawImage}?v=${Date.now()}` : `data:image/jpeg;base64,${rawImage.trim()}`)
               : null;
             const jenis = item?.jenis || item?.nama || '';
             const slug = jenis.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');

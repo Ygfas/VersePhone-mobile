@@ -12,7 +12,12 @@ export default function ImageWithFallback({ uri, style, className = '', contentF
     setError(false);
   }, [uri]);
 
-  if (!uri || error) {
+  // Paksa cache bust & bypass memory cache expo-image dengan timestamp unik jika berupa URL
+  const processedUri = uri && uri.startsWith('http') 
+    ? (uri.includes('?') ? `${uri}&_cb=${Date.now()}` : `${uri}?_cb=${Date.now()}`)
+    : uri;
+
+  if (!processedUri || error) {
     return (
       <View style={style} className={`bg-surfaceContainerHigh items-center justify-center ${className}`}>
         <MaterialIcons name="image-not-supported" size={36} color="#90CAF9" />
@@ -23,7 +28,8 @@ export default function ImageWithFallback({ uri, style, className = '', contentF
 
   return (
     <Image
-      source={{ uri }}
+      key={processedUri}
+      source={{ uri: processedUri, cache: 'reload' }}
       style={style}
       className={className}
       contentFit={contentFit}

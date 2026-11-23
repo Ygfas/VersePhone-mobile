@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/refs */
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { View, ScrollView, Text, TouchableOpacity, Image, Modal, Pressable, Share, Linking, Animated, Easing } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -63,6 +63,8 @@ export default function Detail() {
     } catch (_e) {
       // ignore cache read error
     }
+    // Hapus cache lama agar gambar terbaru selalu di-load
+    AsyncStorage.removeItem(`verse_cache_product_detail_${slug}`).catch(() => {});
 
     let lastErr;
     for (let i = 0; i < 3; i++) {
@@ -238,7 +240,10 @@ export default function Detail() {
     const productVariant = product?.storage?.[0] ? `${product.storage[0]}` : (product?.specs?.RAM ? `${product.specs.RAM} / ${product.specs['Internal Storage (ROM)'] || ''}` : '12GB/256GB');
     const productPrice = product?.price ? `Rp ${product.price.toLocaleString('id-ID')}` : 'Rp 21.999.000';
     const productStock = product?.stock ?? product?.stok ?? 0;
-    const productImage = product?.image ? (product.image.startsWith('http') ? product.image : `${getApiBaseUrl()}${product.image}`) : 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg';
+    const productImage = useMemo(() => {
+      const raw = product?.image;
+      return raw ? (raw.startsWith('http') ? raw + '?v=' + Date.now() : `${getApiBaseUrl()}${raw}?v=${Date.now()}`) : 'https://i.pinimg.com/736x/ec/af/f5/ecaff525c3f4e996bb93563082a7bc67.jpg';
+    }, [product]);
     const productColors = product?.colors?.length > 0 ? product.colors.map((c, i) => ({ name: c, hex: ['#3B82F6', '#1E293B', '#94A3B8', '#EF4444', '#10B981'][i] || '#3B82F6' })) : [
       { name: 'Blue', hex: '#3B82F6' },
       { name: 'Black', hex: '#1E293B' },
@@ -410,7 +415,7 @@ export default function Detail() {
                     className="rounded-[12px] overflow-hidden bg-white dark:bg-[#1E293B] border border-blue-500 dark:border-[#334155]"
                   >
                     {/* GAMBAR DI ATAS — contain + bg putih agar tidak terpotong */}
-                    <View className="w-full h-[300px] bg-white dark:bg-[#1E293B] relative overflow-hidden items-center justify-center">
+                    <View className="w-full h-[400px] bg-white dark:bg-[#1E293B] relative overflow-hidden items-center justify-center">
                                           <ImageWithFallback
                                             uri={imageUri || productImage}
                                             style={{ width: '100%', height: '100%' }}

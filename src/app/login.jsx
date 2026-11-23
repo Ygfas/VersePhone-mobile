@@ -7,6 +7,9 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  Image,
+  KeyboardAvoidingView,
+  ScrollView,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { TopAppBar } from "../components/TopAppBar";
@@ -80,25 +83,25 @@ export default function Login() {
   };
 
   const handleGoogleSignIn = async () => {
-      setIsSubmitting(true);
-      try {
-        const result = await loginWithGoogle();
-        if (result.success) {
-          const role = (result.role || result.user?.role || "").toLowerCase();
-          if (role === "admin") {
-            router.replace("/overview");
-          } else {
-            router.replace("/");
-          }
+    setIsSubmitting(true);
+    try {
+      const result = await loginWithGoogle();
+      if (result.success) {
+        const role = (result.role || result.user?.role || "").toLowerCase();
+        if (role === "admin") {
+          router.replace("/overview");
         } else {
-          Alert.alert(tLoginFailed, result.error);
+          router.replace("/");
         }
-      } catch (error) {
-        Alert.alert(tLoginFailed, error.message || "Gagal login dengan Google");
-      } finally {
-        setIsSubmitting(false);
+      } else {
+        Alert.alert(tLoginFailed, result.error);
       }
-    };
+    } catch (error) {
+      Alert.alert(tLoginFailed, error.message || "Gagal login dengan Google");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // Loading state awal (checkSession)
   if (isLoading && user === null) {
@@ -110,26 +113,38 @@ export default function Login() {
   }
 
   return (
-    <View className="flex-1 bg-surface dark:bg-[#0F172A]">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      className="flex-1 bg-surface dark:bg-[#0F172A]"
+    >
       <TopAppBar leftIcon="arrow-back" onLeftPress={() => router.back()} />
 
-      <TouchableOpacity className="absolute top-[48px] right-4" onPress={() => router.push("/signup")}>
+      <TouchableOpacity className="absolute top-[48px] right-4 z-10" onPress={() => router.push("/signup")}>
         <Text className="text-xl mt-7 text-primary dark:text-[#90CAF9] font-medium">{tSignUp}</Text>
       </TouchableOpacity>
 
-      {/* INFORMASI HALAMAN LOGIN */}
-      <View className="px-6 mt-6">
-        <Text className="text-2xl font-bold text-black dark:text-[#E3F2FD]">
-          Masuk ke Akun Anda
-        </Text>
-        <Text className="text-sm text-onSurfaceVariant dark:text-[#90CAF9] mt-1">
-          Silakan login menggunakan akun yang sudah terdaftar untuk melanjutkan.
-        </Text>
-      </View>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, paddingBottom: 280 }} keyboardShouldPersistTaps="handled">
+        {/* INFORMASI HALAMAN LOGIN */}
+        <View className="px-6 mt-2 items-left">
+          <Text className="text-xl font-bold text-black dark:text-[#E3F2FD] text-left">
+            Masuk ke Akun Anda
+          </Text>
+          <Text className="text-xs text-onSurfaceVariant dark:text-[#90CAF9] mt-0.5 mb-2 text-left">
+            Silakan login menggunakan akun yang sudah terdaftar untuk melanjutkan.
+          </Text>
+          <Image
+            source={require("../../assets/images/logo-verse.png")}
+            resizeMode="contain"
+            className="w-32 h-32 self-center mb-1 overflow-hidden rounded-xl shadow-sm mt-10"
+          />
+          <Text className="text-2xl font-bold text-dark dark:text-[#90CAF9] mb-10 text-center uppercase tracking-wider ">
+            Versephone
+          </Text>
+        </View>
 
-      <View className="p-4 mt-4 flex-1 items-center">
+        <View className="px-4 py-2 mt-1 flex-1 items-center">
         {/* INPUT USERNAME */}
-        <View className="w-full mb-6">
+        <View className="w-full mb-0">
           <Text className="text-xl font-medium text-black dark:text-[#E3F2FD] m-2">{tNameOrUsername}</Text>
           <View className="flex-row items-center border border-outline dark:border-[#334155] rounded-full h-[56px] px-4 bg-surface dark:bg-[#0F172A]">
             <MaterialIcons name="person" size={24} color={isDark ? "#90CAF9" : "#4F453D"} style={{ marginRight: 12 }} />
@@ -198,6 +213,7 @@ export default function Login() {
           )}
         </TouchableOpacity>
       </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
